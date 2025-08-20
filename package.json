@@ -1,0 +1,28 @@
+{
+  "name": "expocomms2025",
+  "version": "1.0.0",
+  "description": "*Requirements Document*",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "vite"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BilimLaribaa/expocomms2025.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BilimLaribaa/expocomms2025/issues"
+  },
+  "homepage": "https://github.com/BilimLaribaa/expocomms2025#readme",
+  "dependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "vite": "^7.1.3"
+  }
+}
