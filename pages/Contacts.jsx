@@ -188,10 +188,133 @@ export default function Contacts() {
       },
     ]);
 
-  function ContactForm() {
-    return (
-      <>
-        <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 4,
+          overflow: "auto",
+        }}
+      >
+        <Typography variant="h4">Contacts</Typography>
+
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button variant="contained" color="primary" onClick={handleOpen}>
+            Create
+          </Button>
+
+          <Button variant="outlined" component="label" color="secondary">
+            Import from Excel
+            <input type="file" accept=".xlsx, .xls" hidden />
+          </Button>
+        </Box>
+      </Box>
+
+      {/* Filters */}
+      <Box display="flex" gap={2} mb={2} flexWrap="wrap">
+        <TextField label="Title" select sx={{ width: 220 }}>
+          {titles.map((title) => (
+            <MenuItem key={title} value={title}>
+              {title}
+            </MenuItem>
+          ))}
+        </TextField>
+
+        <TextField label="Contact Type" select sx={{ width: 220 }}>
+          {types.map((type) => (
+            <MenuItem
+              key={type}
+              value={type === "All" ? "" : type.replace(".", "")}
+            >
+              {type}
+            </MenuItem>
+          ))}
+        </TextField>
+
+        <TextField label="State" select sx={{ width: 220 }}>
+          <MenuItem value="">All</MenuItem>
+        </TextField>
+
+        <TextField label="City" select sx={{ width: 220 }}>
+          <MenuItem value="">All</MenuItem>
+        </TextField>
+      </Box>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <MuiAlert
+          onClose={handleSnackbarClose}
+          severity="success"
+          elevation={6}
+          variant="filled"
+        >
+          Contact successfully added!
+        </MuiAlert>
+      </Snackbar>
+
+      {/* DataGrid */}
+      <Box
+        sx={{
+          height: 600,
+          width: "100%",
+          mt: 3,
+          borderRadius: 2,
+          bgcolor: "white",
+          boxShadow: 3,
+          overflowx: "auto",
+        }}
+      >
+        <DataGrid
+          rows={[]}
+          columns={columns}
+          getRowId={(row) => row.id}
+          checkboxSelection
+          disableColumnMenu
+          disableRowSelectionOnClick
+        initialState={{
+  columns: {
+    columnVisibilityModel: Object.fromEntries(
+      columns.map((col) => [
+        col.field,
+        visible.includes(col.field),
+      ])
+    ),
+  },
+}}
+          sx={{
+            overflow: "auto",
+            border: "none",
+            "& .MuiDataGrid-columnHeaders": {
+              borderTopLeftRadius: "8px",
+              borderTopRightRadius: "8px",
+              backgroundColor: "#f4f6f8",
+              fontWeight: "bold",
+              fontSize: "0.9rem",
+              textAlign: "center",
+            },
+            "& .MuiDataGrid-cell": {
+              fontSize: "0.85rem",
+              wordBreak: "break-word",
+              whiteSpace: "normal",
+              lineHeight: 1.5,
+              textAlign: "center",
+              overflowWrap: "break-word",
+              paddingTop: "15px",
+            },
+          }}
+          showToolbar
+        />
+      </Box>
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
           <DialogTitle>Add Contact</DialogTitle>
           <DialogContent sx={{ pt: 2 }}>
             <Grid container spacing={2}>
@@ -279,7 +402,7 @@ export default function Contacts() {
                   ))}
                 </TextField>
               </Grid>
-              <Grid item xs={6}>
+              {/* <Grid item xs={6}>
                 <TextField
                   label="State"
                   name="state"
@@ -324,7 +447,7 @@ export default function Contacts() {
                   fullWidth
                   sx={{ width: "195px" }}
                 />
-              </Grid>
+              </Grid> */}
               <Grid item xs={12}>
                 <TextField
                   label="Address"
@@ -481,136 +604,10 @@ export default function Contacts() {
             </Button>
           </DialogActions>
         </Dialog>
-      </>
-    );
-  }
-
-  return (
-    <Box sx={{ p: 3 }}>
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          mb: 4,
-          overflow: "auto",
-        }}
-      >
-        <Typography variant="h4">Contacts</Typography>
-
-        <Box sx={{ display: "flex", gap: 2 }}>
-          <Button variant="contained" color="primary" onClick={handleOpen}>
-            Create
-          </Button>
-
-          <Button variant="outlined" component="label" color="secondary">
-            Import from Excel
-            <input type="file" accept=".xlsx, .xls" hidden />
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Filters */}
-      <Box display="flex" gap={2} mb={2} flexWrap="wrap">
-        <TextField label="Title" select sx={{ width: 220 }}>
-          {titles.map((title) => (
-            <MenuItem key={title} value={title}>
-              {title}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <TextField label="Contact Type" select sx={{ width: 220 }}>
-          {types.map((type) => (
-            <MenuItem
-              key={type}
-              value={type === "All" ? "" : type.replace(".", "")}
-            >
-              {type}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <TextField label="State" select sx={{ width: 220 }}>
-          <MenuItem value="">All</MenuItem>
-        </TextField>
-
-        <TextField label="City" select sx={{ width: 220 }}>
-          <MenuItem value="">All</MenuItem>
-        </TextField>
-      </Box>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-      >
-        <MuiAlert
-          onClose={handleSnackbarClose}
-          severity="success"
-          elevation={6}
-          variant="filled"
-        >
-          Contact successfully added!
-        </MuiAlert>
-      </Snackbar>
-
-      {/* DataGrid */}
-      <Box
-        sx={{
-          height: 600,
-          width: "100%",
-          mt: 3,
-          borderRadius: 2,
-          bgcolor: "white",
-          boxShadow: 3,
-          overflowx: "auto",
-        }}
-      >
-        <DataGrid
-          rows={[]}
-          columns={columns}
-          getRowId={(row) => row.id}
-          checkboxSelection
-          disableColumnMenu
-          disableRowSelectionOnClick
-        initialState={{
-  columns: {
-    columnVisibilityModel: Object.fromEntries(
-      columns.map((col) => [
-        col.field,
-        visible.includes(col.field),
-      ])
-    ),
-  },
-}}
-          sx={{
-            overflow: "auto",
-            border: "none",
-            "& .MuiDataGrid-columnHeaders": {
-              borderTopLeftRadius: "8px",
-              borderTopRightRadius: "8px",
-              backgroundColor: "#f4f6f8",
-              fontWeight: "bold",
-              fontSize: "0.9rem",
-              textAlign: "center",
-            },
-            "& .MuiDataGrid-cell": {
-              fontSize: "0.85rem",
-              wordBreak: "break-word",
-              whiteSpace: "normal",
-              lineHeight: 1.5,
-              textAlign: "center",
-              overflowWrap: "break-word",
-              paddingTop: "15px",
-            },
-          }}
-          showToolbar
-        />
-      </Box>
-      <ContactForm />
     </Box>
   );
 }
+
+
+
+
