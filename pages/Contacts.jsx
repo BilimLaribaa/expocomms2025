@@ -74,6 +74,57 @@ export default function Contacts() {
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
+  const [countries, setCountries] = React.useState([]);
+  const [states, setStates] = React.useState([]);
+  const [cities, setCities] = React.useState([]);
+
+  React.useEffect(() => {
+    fetch("https://countriesnow.space/api/v0.1/countries/states")
+      .then(response => response.json())
+      .then(data => {
+        setCountries(data.data);
+      })
+      .catch(error => console.error('Error fetching countries:', error));
+  }, []);
+
+  const handleCountryChange = (e) => {
+    const countryName = e.target.value;
+    setFormData(prev => ({ ...prev, country: countryName, state: '', city: '' }));
+    const countryData = countries.find(c => c.name === countryName);
+    if (countryData) {
+      setStates(countryData.states);
+      setCities([]);
+    } else {
+      setStates([]);
+      setCities([]);
+    }
+  };
+
+  const handleStateChange = (e) => {
+    const stateName = e.target.value;
+    const countryName = formData.country;
+    setFormData(prev => ({ ...prev, state: stateName, city: '' }));
+    if (countryName && stateName) {
+      fetch(`https://countriesnow.space/api/v0.1/countries/state/cities`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          country: countryName,
+          state: stateName
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          setCities(data.data);
+        })
+        .catch(error => console.error('Error fetching cities:', error));
+    } else {
+      setCities([]);
+    }
+  };
+
   //Snackbar
   const [snackbarOpen, setSnackbarOpen] = React.useState(false);
   const handleSnackbarClose = () => setSnackbarOpen(false);
@@ -215,14 +266,17 @@ export default function Contacts() {
                   label="Country"
                   name="country"
                   value={formData.country}
-                  onChange={handleChange}
+                  onChange={handleCountryChange}
                   fullWidth
                   select
                   sx={{ width: "200px" }}
                 >
                   <MenuItem value="">Select Country</MenuItem>
-                  <MenuItem value="USA">USA</MenuItem>
-                  <MenuItem value="Canada">Canada</MenuItem>
+                  {countries.map((country) => (
+                    <MenuItem key={country.name} value={country.name}>
+                      {country.name}
+                    </MenuItem>
+                  ))}
                 </TextField>
               </Grid>
               <Grid item xs={6}>
@@ -230,12 +284,17 @@ export default function Contacts() {
                   label="State"
                   name="state"
                   value={formData.state}
-                  onChange={handleChange}
+                  onChange={handleStateChange}
                   fullWidth
                   select
                   sx={{ width: "200px" }}
                 >
                   <MenuItem value="">Select State</MenuItem>
+                  {states.map((state) => (
+                    <MenuItem key={state.name} value={state.name}>
+                      {state.name}
+                    </MenuItem>
+                  ))}
                 </TextField>
               </Grid>
               <Grid item xs={6}>
@@ -249,6 +308,11 @@ export default function Contacts() {
                   sx={{ width: "190px" }}
                 >
                   <MenuItem value="">Select City</MenuItem>
+                  {cities.map((city) => (
+                    <MenuItem key={city} value={city}>
+                      {city}
+                    </MenuItem>
+                  ))}
                 </TextField>
               </Grid>
               <Grid item xs={6}>
