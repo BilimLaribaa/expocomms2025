@@ -15,48 +15,67 @@ import {
   FormControlLabel,
 } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
-import { DataGrid,GridToolbar } from "@mui/x-data-grid";
+import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 
 export default function Contacts() {
-  const [open, setOpen] = React.useState(false);
-  const [snackbarOpen, setSnackbarOpen] = React.useState(false);
+  const titles = ["All","Mr.","Mrs.","Ms.","Miss.","Dr.","Er.","Adv.","Prof.",];
+  const types = ["Business","Personal","Company","Non-Profit","School","Other",];
+  const visible = ["id", "full_name", "email", "phone", "whatsapp", "actions"]
+  const fields = [
+    { name: "id", label: "ID", type: "text", tableOnly: true },
+    {
+      name: "name_title",
+      label: "Title",
+      type: "select",
+      options: ["Mr", "Mrs", "Ms", "Miss", "Dr", "Er", "Adv", "Prof"],
+    },
+    { name: "full_name", label: "Full Name", type: "text" },
+    { name: "phone", label: "Mobile Number", type: "text" },
+    { name: "whatsapp", label: "WhatsApp Number", type: "text" },
+    { name: "email", label: "Email", type: "text" },
+    { name: "alternate_email", label: "Alternate Email", type: "text" },
+    { name: "address", label: "Address", type: "multiline" },
+    { name: "city", label: "City", type: "select", options: [] },
+    { name: "state", label: "State", type: "select", options: [] },
+    { name: "postal_code", label: "Postal Code", type: "text" },
+    {
+      name: "country",
+      label: "Country",
+      type: "select",
+      options: ["USA", "Canada"],
+    },
+    {
+      name: "contact_type",
+      label: "Contact Type",
+      type: "select",
+      options: types,
+    },
+    { name: "organization_name", label: "Organization Name", type: "text" },
+    { name: "job_title", label: "Job Title", type: "text" },
+    { name: "department", label: "Department", type: "text" },
+    { name: "website", label: "Website", type: "text" },
+    { name: "linkedin", label: "LinkedIn", type: "text" },
+    { name: "facebook", label: "Facebook", type: "text" },
+    { name: "instagram", label: "Instagram", type: "text" },
+    { name: "relationship", label: "Relationship", type: "text" },
+    { name: "notes", label: "Notes", type: "multiline" },
+    { name: "is_favorite", label: "Is Favorite", type: "checkbox" },
+    { name: "is_active", label: "Is Active", type: "checkbox" },
 
+    { name: "created_at", label: "Created At", type: "text", tableOnly: true },
+    { name: "updated_at", label: "Updated At", type: "text", tableOnly: true },
+  ];
+  
   // Form state
-  const [formData, setFormData] = React.useState({
-    id: null,
-    name_title: "",
-    full_name: "",
-    phone: "",
-    alternate_email: "",
-    email: "",
-    address: "",
-    city: "",
-    state: "",
-    postal_code: "",
-    country: "",
-    contact_type: "",
-    organization_name: "",
-    job_title: "",
-    department: "",
-    website: "",
-    linkedin: "",
-    facebook: "",
-    instagram: "",
-    whatsapp: "",
-    relationship: "",
-    notes: "",
-    is_favorite: false,
-    is_active: true,
-  });
+  const [formData, setFormData] = React.useState({});
 
-  React.useEffect(() => {
-    const t = setTimeout(() => {}, 1200);
-    return () => clearTimeout(t);
-  }, []);
-
+  //Form Modal
+  const [open, setOpen] = React.useState(false);
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
+  //Snackbar
+  const [snackbarOpen, setSnackbarOpen] = React.useState(false);
   const handleSnackbarClose = () => setSnackbarOpen(false);
 
   const handleChange = (e) => {
@@ -68,247 +87,339 @@ export default function Contacts() {
   };
 
   const handleSubmit = () => {
-    
     console.log("Form submitted:", formData);
     setSnackbarOpen(true);
     setOpen(false);
-  
   };
 
-  //column 
+  //column
 
-  const columns = [
-    { field: 'id', headerName: 'ID', minWidth: 70, headerAlign: 'center', align: 'center' },
-    
-    
-    {
-      field: 'full_name',
-      headerName: 'Full Name',
+  
+
+  const columns = fields
+    .filter((f) => !f.formOnly) // exclude form-only fields
+    .map((f) => ({
+      field: f.name,
+      headerName: f.label,
       flex: 1,
       minWidth: 140,
-      headerAlign: 'center',
-      align: 'center',
-      valueGetter:(params, data) => data.name_title+". "+data.full_name,
-    },
-    {
-      field: 'phone',
-      headerName: 'Mobile Number',
-      flex: 1,
-      minWidth: 130,
-      headerAlign: 'center',
-      align: 'center',
-    },
-    {
-      field: 'whatsapp',
-      headerName: 'WhatsApp Number',
-      flex: 1,
-      minWidth: 150,
-      headerAlign: 'center',
-      align: 'center',
-    },
-    
-    {
-      field: 'email',
-      headerName: 'Email',
-      flex: 1,
-      minWidth: 180,
-      headerAlign: 'center',
-      align: 'center',
-    },
-    // {
-    //   field: 'alternate_email',
-    //   headerName: 'Alternate Email',
-    //   flex: 1,
-    //   minWidth: 160,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    
-    
-    // {
-    //   field: 'address',
-    //   headerName: 'Address',
-    //   flex: 1,
-    //   minWidth: 200,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'city',
-    //   headerName: 'City',
-    //   flex: 1,
-    //   minWidth: 120,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'state',
-    //   headerName: 'State',
-    //   flex: 1,
-    //   minWidth: 120,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'postal_code',
-    //   headerName: 'Postal Code',
-    //   flex: 1,
-    //   minWidth: 120,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'country',
-    //   headerName: 'Country',
-    //   type: 'string',
-    //   flex: 1,
-    //   minWidth: 120,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'contact_type',
-    //   headerName: 'Contact Type',
-    //   flex: 1,
-    //   minWidth: 140,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'organization_name',
-    //   headerName: 'Organization Name',
-    //   flex: 1,
-    //   minWidth: 150,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'job_title',
-    //   headerName: 'Job Title',
-    //   flex: 1,
-    //   minWidth: 140,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'department',
-    //   headerName: 'Department',
-    //   flex: 1,
-    //   minWidth: 140,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'website',
-    //   headerName: 'Website',
-    //   flex: 1,
-    //   minWidth: 150,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'linkedin',
-    //   headerName: 'LinkedIn Profile',
-    //   flex: 1,
-    //   minWidth: 150,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'facebook',
-    //   headerName: 'Facebook Profile',
-    //   flex: 1,
-    //   minWidth: 150,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'instagram',
-    //   headerName: 'Instagram Profile',
-    //   flex: 1,
-    //   minWidth: 150,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    
-    // {
-    //   field: 'relationship',
-    //   headerName: 'Relationship',
-    //   flex: 1,
-    //   minWidth: 120,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'notes',
-    //   headerName: 'Notes',
-    //   flex: 1,
-    //   minWidth: 150,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'is_favorite',
-    //   headerName: 'Is Favorite',
-    //   flex: 1,
-    //   minWidth: 100,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'is_active',
-    //   headerName: 'Is Active',
-    //   flex: 1,
-    //   minWidth: 100,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'created_at',
-    //   headerName: 'Created At',
-    //   flex: 1,
-    //   minWidth: 160,
-    //   headerAlign: 'center',
-    //   align: 'center',
-    // },
-    // {
-    //   field: 'updated_at',
-    //   headerName: 'Updated At',
-    //   flex: 1,
-    //  minWidth: 160,
-    //   headerAlign: 'center',
-    //   align: 'center',
-     
-    // },
-    {
-      field: 'actions',
-      headerName: 'Actions',
-      flex: 1,
-      minWidth: 180,
-      headerAlign: 'center',
-      align: 'center',
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-          <Button
-            onClick={() => handleOpen(params.row)}
-            variant="outlined"
-            size="small"
-            color="primary"
-          >
-            Edit
-          </Button>
-          <Button
-            onClick={() => handleDelete(params.row.id)}
-            variant="outlined"
-            size="small"
-            color="error"
-          >
-            Delete
-          </Button>
-        </Box>
-      ),
-    },
-  ];
+      headerAlign: "center",
+      align: "center",
+    }))
+    .concat([
+      {
+        field: "actions",
+        headerName: "Actions",
+        flex: 1,
+        minWidth: 180,
+        headerAlign: "center",
+        align: "center",
+        renderCell: (params) => (
+          <Box sx={{ display: "flex", justifyContent: "center", gap: 1 }}>
+            <Button
+              onClick={() => handleOpen(params.row)}
+              variant="outlined"
+              size="small"
+              color="primary"
+            >
+              Edit
+            </Button>
+            <Button
+              onClick={() => handleDelete(params.row.id)}
+              variant="outlined"
+              size="small"
+              color="error"
+            >
+              Delete
+            </Button>
+          </Box>
+        ),
+      },
+    ]);
+
+  function ContactForm() {
+    return (
+      <>
+        <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
+          <DialogTitle>Add Contact</DialogTitle>
+          <DialogContent sx={{ pt: 2 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={3}>
+                <TextField
+                  label="Title"
+                  name="name_title"
+                  value={formData.name_title}
+                  onChange={handleChange}
+                  sx={{ width: "100px" }}
+                  select
+                >
+                  {titles.map((title) => (
+                    <MenuItem key={title} value={title}>
+                      {title}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={9}>
+                <TextField
+                  label="Full Name"
+                  name="full_name"
+                  value={formData.full_name}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{ width: "720px" }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Mobile Number"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{ width: "410px" }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="WhatsApp Number"
+                  name="whatsapp"
+                  value={formData.whatsapp}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{ width: "410px" }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{ width: "410px" }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Alternate Email"
+                  name="alternate_email"
+                  value={formData.alternate_email}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{ width: "410px" }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Country"
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  fullWidth
+                  select
+                  sx={{ width: "200px" }}
+                >
+                  <MenuItem value="">Select Country</MenuItem>
+                  <MenuItem value="USA">USA</MenuItem>
+                  <MenuItem value="Canada">Canada</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="State"
+                  name="state"
+                  value={formData.state}
+                  onChange={handleChange}
+                  fullWidth
+                  select
+                  sx={{ width: "200px" }}
+                >
+                  <MenuItem value="">Select State</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="City"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  fullWidth
+                  select
+                  sx={{ width: "190px" }}
+                >
+                  <MenuItem value="">Select City</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Postal Code"
+                  name="postal_code"
+                  value={formData.postal_code}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{ width: "195px" }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  fullWidth
+                  multiline
+                  rows={2}
+                  sx={{ width: "835px" }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Contact Type"
+                  name="contact_type"
+                  value={formData.contact_type}
+                  onChange={handleChange}
+                  fullWidth
+                  select
+                  sx={{ width: "133px" }}
+                >
+                  <MenuItem value="">Select Type</MenuItem>
+                  {types.map((type) => (
+                    <MenuItem
+                      key={type}
+                      value={type === "All" ? "" : type.replace(".", "")}
+                    >
+                      {type}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Organization Name"
+                  name="organization_name"
+                  value={formData.organization_name}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{ width: "230px" }}
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Job Title"
+                  name="job_title"
+                  value={formData.job_title}
+                  onChange={handleChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Department"
+                  name="department"
+                  value={formData.department}
+                  onChange={handleChange}
+                  fullWidth
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Website"
+                  name="website"
+                  value={formData.website}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{ width: "190px" }}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField
+                  label="LinkedIn"
+                  name="linkedin"
+                  value={formData.linkedin}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{ width: "190px" }}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField
+                  label="Facebook"
+                  name="facebook"
+                  value={formData.facebook}
+                  onChange={handleChange}
+                  fullWidth
+                  sx={{ width: "190px" }}
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField
+                  label="Instagram"
+                  name="instagram"
+                  value={formData.instagram}
+                  onChange={handleChange}
+                  fullWidth
+                />
+              </Grid>
+
+              <Grid item xs={12}>
+                <TextField
+                  label="Relationship"
+                  name="relationship"
+                  value={formData.relationship}
+                  onChange={handleChange}
+                  fullWidth
+                />
+              </Grid>
+
+              <Grid item xs={6}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={formData.is_favorite}
+                      onChange={handleChange}
+                      name="is_favorite"
+                    />
+                  }
+                  label="Is Favorite"
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={formData.is_active}
+                      onChange={handleChange}
+                      name="is_active"
+                    />
+                  }
+                  label="Is Active"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Notes"
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleChange}
+                  multiline
+                  rows={4}
+                  fullWidth
+                  sx={{ width: "835px" }}
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleClose}>Cancel</Button>
+            <Button variant="contained" onClick={handleSubmit}>
+              Add
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </>
+    );
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -318,12 +429,12 @@ export default function Contacts() {
           justifyContent: "space-between",
           alignItems: "center",
           mb: 4,
-          overflow: 'auto',
+          overflow: "auto",
         }}
       >
         <Typography variant="h4">Contacts</Typography>
 
-        <Box sx={{ display: "flex", gap: 2 }} >
+        <Box sx={{ display: "flex", gap: 2 }}>
           <Button variant="contained" color="primary" onClick={handleOpen}>
             Create
           </Button>
@@ -338,25 +449,22 @@ export default function Contacts() {
       {/* Filters */}
       <Box display="flex" gap={2} mb={2} flexWrap="wrap">
         <TextField label="Title" select sx={{ width: 220 }}>
-          <MenuItem value="">All</MenuItem>
-          <MenuItem value="Mr">Mr.</MenuItem>
-          <MenuItem value="Mrs">Mrs.</MenuItem>
-          <MenuItem value="Ms">Ms.</MenuItem>
-          <MenuItem value="Miss">Miss.</MenuItem>
-          <MenuItem value="Dr">Dr.</MenuItem>
-          <MenuItem value="Er">Er.</MenuItem>
-          <MenuItem value="Adv">Adv.</MenuItem>
-          <MenuItem value="Prof">Prof.</MenuItem>
+          {titles.map((title) => (
+            <MenuItem key={title} value={title}>
+              {title}
+            </MenuItem>
+          ))}
         </TextField>
 
         <TextField label="Contact Type" select sx={{ width: 220 }}>
-          <MenuItem value="">All</MenuItem>
-          <MenuItem value="Business">Business</MenuItem>
-          <MenuItem value="Personal">Personal</MenuItem>
-          <MenuItem value="Company">Company</MenuItem>
-          <MenuItem value="Non-Profit">Non-Profit</MenuItem>
-          <MenuItem value="School">School</MenuItem>
-          <MenuItem value="Other">Other</MenuItem>
+          {types.map((type) => (
+            <MenuItem
+              key={type}
+              value={type === "All" ? "" : type.replace(".", "")}
+            >
+              {type}
+            </MenuItem>
+          ))}
         </TextField>
 
         <TextField label="State" select sx={{ width: 220 }}>
@@ -373,7 +481,7 @@ export default function Contacts() {
         open={snackbarOpen}
         autoHideDuration={3000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
         <MuiAlert
           onClose={handleSnackbarClose}
@@ -394,20 +502,28 @@ export default function Contacts() {
           borderRadius: 2,
           bgcolor: "white",
           boxShadow: 3,
-          overflowx:'auto'
+          overflowx: "auto",
         }}
       >
         <DataGrid
-         rows={[]}
-         
+          rows={[]}
           columns={columns}
           getRowId={(row) => row.id}
           checkboxSelection
           disableColumnMenu
           disableRowSelectionOnClick
-
+        initialState={{
+  columns: {
+    columnVisibilityModel: Object.fromEntries(
+      columns.map((col) => [
+        col.field,
+        visible.includes(col.field),
+      ])
+    ),
+  },
+}}
           sx={{
-            overflow: 'auto',
+            overflow: "auto",
             border: "none",
             "& .MuiDataGrid-columnHeaders": {
               borderTopLeftRadius: "8px",
@@ -417,306 +533,20 @@ export default function Contacts() {
               fontSize: "0.9rem",
               textAlign: "center",
             },
-            '& .MuiDataGrid-cell': {
-              fontSize: '0.85rem',
-              wordBreak: 'break-word',
-              whiteSpace: 'normal',
+            "& .MuiDataGrid-cell": {
+              fontSize: "0.85rem",
+              wordBreak: "break-word",
+              whiteSpace: "normal",
               lineHeight: 1.5,
-              textAlign: 'center',
-              overflowWrap: 'break-word',
-              paddingTop: '15px',
+              textAlign: "center",
+              overflowWrap: "break-word",
+              paddingTop: "15px",
             },
-            
           }}
           showToolbar
         />
       </Box>
-
-     
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
-        <DialogTitle>Add Contact</DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-          <Grid container spacing={2}>
-            <Grid item xs={3}>
-              <TextField
-                label="Title"
-                name="name_title"
-                value={formData.name_title}
-                onChange={handleChange}
-                sx={{ width: "100px" }}
-                select
-              >
-                <MenuItem value="Mr">Mr.</MenuItem>
-                <MenuItem value="Mrs">Mrs.</MenuItem>
-                <MenuItem value="Ms">Ms.</MenuItem>
-                <MenuItem value="Miss">Miss.</MenuItem>
-                <MenuItem value="Dr">Dr.</MenuItem>
-                <MenuItem value="Er">Er.</MenuItem>
-                <MenuItem value="Adv">Adv.</MenuItem>
-                <MenuItem value="Prof">Prof.</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={9}>
-              <TextField
-                label="Full Name"
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleChange}
-                fullWidth
-                sx={{ width: "720px" }}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Mobile Number"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                fullWidth
-                sx={{ width: "410px" }}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="WhatsApp Number"
-                name="whatsapp"
-                value={formData.whatsapp}
-                onChange={handleChange}
-                fullWidth
-                sx={{ width: "410px" }}
-
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                fullWidth
-                sx={{ width: "410px" }}
-
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Alternate Email"
-                name="alternate_email"
-                value={formData.alternate_email}
-                onChange={handleChange}
-                fullWidth
-                sx={{ width: "410px" }}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Country"
-                name="country"
-                value={formData.country}
-                onChange={handleChange}
-                fullWidth
-                select
-                sx={{ width: "200px" }}
-              >
-               
-                <MenuItem value="">Select Country</MenuItem>
-                <MenuItem value="USA">USA</MenuItem>
-                <MenuItem value="Canada">Canada</MenuItem>
-                
-              </TextField>
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="State"
-                name="state"
-                value={formData.state}
-                onChange={handleChange}
-                fullWidth
-                select
-                sx={{ width: "200px" }}
-              >
-                
-                <MenuItem value="">Select State</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="City"
-                name="city"
-                value={formData.city}
-                onChange={handleChange}
-                fullWidth
-                select
-                sx={{ width: "190px" }}
-              >
-               
-                <MenuItem value="">Select City</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Postal Code"
-                name="postal_code"
-                value={formData.postal_code}
-                onChange={handleChange}
-                fullWidth
-                sx={{ width: "195px" }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                label="Address"
-                name="address"
-                value={formData.address}
-                onChange={handleChange}
-                fullWidth
-                multiline
-                rows={2}
-                sx={{ width: "835px" }}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Contact Type"
-                name="contact_type"
-                value={formData.contact_type}
-                onChange={handleChange}
-                fullWidth
-                select
-                sx={{ width: "133px" }}
-              >
-                <MenuItem value="">Select Type</MenuItem>
-                <MenuItem value="Business">Business</MenuItem>
-                <MenuItem value="Personal">Personal</MenuItem>
-                <MenuItem value="Company">Company</MenuItem>
-                <MenuItem value="Non-Profit">Non-Profit</MenuItem>
-                <MenuItem value="School">School</MenuItem>
-                <MenuItem value="Other">Other</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Organization Name"
-                name="organization_name"
-                value={formData.organization_name}
-                onChange={handleChange}
-                fullWidth
-                sx={{ width: "230px" }}
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Job Title"
-                name="job_title"
-                value={formData.job_title}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <TextField
-                label="Department"
-                name="department"
-                value={formData.department}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                label="Website"
-                name="website"
-                value={formData.website}
-                onChange={handleChange}
-                fullWidth
-                sx={{ width: "190px" }}
-              />
-            </Grid>
-            <Grid item xs={4}>
-              <TextField
-                label="LinkedIn"
-                name="linkedin"
-                value={formData.linkedin}
-                onChange={handleChange}
-                fullWidth
-                sx={{ width: "190px" }}
-              />
-            </Grid>
-            <Grid item xs={4}>
-              <TextField
-                label="Facebook"
-                name="facebook"
-                value={formData.facebook}
-                onChange={handleChange}
-                fullWidth
-                sx={{ width: "190px" }}
-              />
-            </Grid>
-            <Grid item xs={4}>
-              <TextField
-                label="Instagram"
-                name="instagram"
-                value={formData.instagram}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                label="Relationship"
-                name="relationship"
-                value={formData.relationship}
-                onChange={handleChange}
-                fullWidth
-              />
-            </Grid>
-            
-            <Grid item xs={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={formData.is_favorite}
-                    onChange={handleChange}
-                    name="is_favorite"
-                  />
-                }
-                label="Is Favorite"
-              />
-            </Grid>
-            <Grid item xs={6}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={formData.is_active}
-                    onChange={handleChange}
-                    name="is_active"
-                  />
-                }
-                label="Is Active"
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                label="Notes"
-                name="notes"
-                value={formData.notes}
-                onChange={handleChange}
-                multiline
-                rows={4}
-                fullWidth
-                sx={{ width: "835px" }}
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
-          <Button variant="contained" onClick={handleSubmit}>
-            Add
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <ContactForm />
     </Box>
   );
 }
