@@ -13,10 +13,15 @@ import {
   TextField,
   Checkbox,
   FormControlLabel,
+  Accordion, // Added
+  AccordionSummary, // Added
+  AccordionDetails, // Added
 } from "@mui/material";
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'; // Added
 import MuiAlert from "@mui/material/Alert";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import * as XLSX from 'xlsx'; // Import xlsx library
+import API_BASE_URL from '../config.js';
 
 export default function Contacts() {
   const titles = ["All","Mr","Mrs","Ms","Miss","Dr","Er","Adv","Prof",];
@@ -29,39 +34,45 @@ export default function Contacts() {
       label: "Title",
       type: "select",
       options: ["Mr", "Mrs", "Ms", "Miss", "Dr", "Er", "Adv", "Prof"],
+      section: "Personal Info",
+      xs: 4,
     },
-    { name: "full_name", label: "Full Name", type: "text" },
-    { name: "phone", label: "Mobile Number", type: "text" },
-    { name: "whatsapp", label: "WhatsApp Number", type: "text" },
-    { name: "email", label: "Email", type: "text" },
-    { name: "alternate_email", label: "Alternate Email", type: "text" },
-    { name: "address", label: "Address", type: "multiline" },
-    { name: "city", label: "City", type: "select", options: [] },
-    { name: "state", label: "State", type: "select", options: [] },
-    { name: "postal_code", label: "Postal Code", type: "text" },
+    { name: "full_name", label: "Full Name", type: "text", section: "Personal Info", xs: 8, required: true },
+    { name: "phone", label: "Mobile Number", type: "text", section: "Personal Info", xs: 6, required: true },
+    { name: "whatsapp", label: "WhatsApp Number", type: "text", section: "Personal Info", xs: 6, required: true },
+    { name: "email", label: "Email", type: "text", section: "Personal Info", xs: 6, required: true },
+    { name: "alternate_email", label: "Alternate Email", type: "text", section: "Personal Info", xs: 6 },
+    { name: "relationship", label: "Relationship", type: "text", section: "Personal Info", xs: 12 },
+    { name: "address", label: "Address", type: "multiline", section: "Personal Info", xs: 12 },
+    { name: "city", label: "City", type: "select", options: [], section: "Address", xs: 6 },
+    { name: "state", label: "State", type: "select", options: [], section: "Address", xs: 6 },
+    { name: "postal_code", label: "Postal Code", type: "text", section: "Address", xs: 6 },
     {
       name: "country",
       label: "Country",
       type: "select",
       options: ["USA", "Canada"],
+      section: "Address",
+      xs: 6,
     },
     {
       name: "contact_type",
       label: "Contact Type",
       type: "select",
       options: types,
+      section: "Contact Type",
+      xs: 12,
     },
-    { name: "organization_name", label: "Organization Name", type: "text" },
-    { name: "job_title", label: "Job Title", type: "text" },
-    { name: "department", label: "Department", type: "text" },
-    { name: "website", label: "Website", type: "text" },
-    { name: "linkedin", label: "LinkedIn", type: "text" },
-    { name: "facebook", label: "Facebook", type: "text" },
-    { name: "instagram", label: "Instagram", type: "text" },
-    { name: "relationship", label: "Relationship", type: "text" },
-    { name: "notes", label: "Notes", type: "multiline" },
-    { name: "is_favorite", label: "Is Favorite", type: "checkbox" },
-    { name: "is_active", label: "Is Active", type: "checkbox" },
+    { name: "organization_name", label: "Organization Name", type: "text", section: "Professional Info", xs: 6 },
+    { name: "job_title", label: "Job Title", type: "text", section: "Professional Info", xs: 6 },
+    { name: "department", label: "Department", type: "text", section: "Professional Info", xs: 6 },
+    { name: "website", label: "Website", type: "text", section: "Professional Info", xs: 6 },
+    { name: "linkedin", label: "LinkedIn", type: "text", section: "Social Media", xs: 4 },
+    { name: "facebook", label: "Facebook", type: "text", section: "Social Media", xs: 4 },
+    { name: "instagram", label: "Instagram", type: "text", section: "Social Media", xs: 4 },
+    { name: "notes", label: "Notes", type: "multiline", section: "Status", xs: 12 },
+    { name: "is_favorite", label: "Is Favorite", type: "checkbox", section: "Status", xs: 6 },
+    { name: "is_active", label: "Is Active", type: "checkbox", section: "Status", xs: 6 },
 
     { name: "created_at", label: "Created At", type: "text", tableOnly: true },
     { name: "updated_at", label: "Updated At", type: "text", tableOnly: true },
@@ -69,10 +80,12 @@ export default function Contacts() {
   
   // Form state
   const [formData, setFormData] = React.useState({});
+  
+  const [errors, setErrors] = React.useState({});
 
   //Form Modal
   const [open, setOpen] = React.useState(false);
-  const [editingContactId, setEditingContactId] = React.useState(null); // New state for editing
+  const [editingContactId, setEditingContactId] = React.useState(null); 
 
   const handleOpen = (contact = null) => {
     if (contact) {
@@ -82,22 +95,24 @@ export default function Contacts() {
       setFormData({});
       setEditingContactId(null);
     }
+    setErrors({});
+    
     setOpen(true);
   };
   const handleClose = () => {
     setOpen(false);
-    setFormData({}); // Clear form data on close
-    setEditingContactId(null); // Reset editing state on close
+    setFormData({}); 
+    setEditingContactId(null); 
   };
 
   const [countries, setCountries] = React.useState([]);
   const [states, setStates] = React.useState([]);
   const [cities, setCities] = React.useState([]);
-  const [contacts, setContacts] = React.useState([]); // New state for contacts
+  const [contacts, setContacts] = React.useState([]); 
 
   const fetchContacts = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/contacts');
+      const response = await fetch(`${API_BASE_URL}/contacts`);
       if (response.ok) {
         const data = await response.json();
         setContacts(data);
@@ -178,6 +193,47 @@ export default function Contacts() {
   };
 
   const handleSubmit = async () => {
+    const newErrors = {};
+   fields.forEach(field => {
+    const value = formData[field.name];
+
+    // ✅ Custom error for full_name
+    if (field.name === 'full_name' && (!value || value.trim() === '')) {
+      newErrors[field.name] = 'empty name not allowed';
+    }
+
+    // ✅ Custom error for phone
+    else if (field.name === 'phone' && (!value || value.trim() === '')) {
+      newErrors[field.name] = 'mobile number is required';
+    }
+
+    // ✅ Custom error for whatsapp
+    else if (field.name === 'whatsapp' && (!value || value.trim() === '')) {
+      newErrors[field.name] = 'whatsapp number is required';
+    }
+
+    // ✅ Generic required check
+    else if (field.required && !value) {
+      newErrors[field.name] = `${field.label} is required`;
+    }
+
+    // ✅ Phone/WhatsApp number format check
+   if ((field.name === 'phone' || field.name === 'whatsapp') && value) {
+  const cleaned = value.replace(/[^0-9+ ]/g, ''); // Allow only digits, +, and space
+
+  if (cleaned.length > 15) {
+    newErrors[field.name] = 'Number must be 15 characters or less';
+  }
+}
+
+  });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+
     try {
       let response;
       let method;
@@ -187,12 +243,12 @@ export default function Contacts() {
       if (editingContactId) {
         // Editing existing contact
         method = 'PUT';
-        url = `http://localhost:3001/api/contacts/${editingContactId}`;
+        url = `${API_BASE_URL}/contacts/${editingContactId}`;
         message = "Contact successfully updated!";
       } else {
         // Creating new contact
         method = 'POST';
-        url = 'http://localhost:3001/api/contacts';
+        url = `${API_BASE_URL}/contacts`;
         message = "Contact successfully added!";
       }
 
@@ -207,33 +263,33 @@ export default function Contacts() {
       if (response.ok) {
         const result = await response.json();
         console.log(`Contact ${editingContactId ? 'updated' : 'created'} successfully:`, result);
-        setSnackbarMessage(message); // Set the appropriate message
+        setSnackbarMessage(message); 
         setSnackbarOpen(true);
         setOpen(false);
-        fetchContacts(); // Refresh the contact list
-        setFormData({}); // Clear the form after successful submission
-        setEditingContactId(null); // Reset editing state
+        fetchContacts(); 
+        setFormData({}); 
+        setEditingContactId(null); 
       } else {
         console.error(`Failed to ${editingContactId ? 'update' : 'create'} contact:`, response.statusText);
-        // Handle error, show an error message to the user
+        
       }
     } catch (error) {
       console.error('Error submitting form:', error);
-      // Handle network errors
+     
     }
   };
 
   const handleDelete = async (id) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/contacts/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/contacts/${id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         console.log('Contact deleted successfully:', id);
-        setSnackbarMessage("Contact successfully deleted!"); // Set delete message
+        setSnackbarMessage("Contact successfully deleted!"); 
         setSnackbarOpen(true); 
-        fetchContacts(); // Refresh the contact list
+        fetchContacts(); 
       } else {
         console.error('Failed to delete contact:', response.statusText);
       }
@@ -251,37 +307,37 @@ export default function Contacts() {
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet);
+        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
         // Map Excel data to contact object structure
-        const importedContacts = json.map(row => ({
-          name_title: row["Title"] || "",
-          full_name: row["Full Name"] || "",
-          phone: String(row["Mobile Number"]) || "",
-          whatsapp: String(row["WhatsApp Number"]) || "",
-          email: row["Email"] || "",
-          alternate_email: row["Alternate Email"] || "",
-          address: row["Address"] || "",
-          city: row["City"] || "",
-          state: row["State"] || "",
-          postal_code: String(row["Postal Code"]) || "",
-          country: row["Country"] || "",
-          contact_type: row["Contact Type"] || "",
-          organization_name: row["Organization Name"] || "",
-          job_title: row["Job Title"] || "",
-          department: row["Department"] || "",
-          website: row["Website"] || "",
-          linkedin: row["LinkedIn"] || "",
-          facebook: row["Facebook"] || "",
-          instagram: row["Instagram"] || "",
-          relationship: row["Relationship"] || "",
-          notes: row["Notes"] || "",
-          is_favorite: row["Is Favorite"] === 1 ? true : false, // Assuming 1 for true, 0 for false
-          is_active: row["Is Active"] === 1 ? true : false, // Assuming 1 for true, 0 for false
+        const importedContacts = json.slice(1).map(row => ({
+          name_title: row[0] || "",
+          full_name: row[1] || "",
+          phone: String(row[2] || ""),
+          whatsapp: String(row[3] || ""),
+          email: row[4] || "",
+          alternate_email: row[5] || "",
+          address: row[6] || "",
+          city: row[7] || "",
+          state: row[8] || "",
+          postal_code: String(row[9] || ""),
+          country: row[10] || "",
+          contact_type: row[11] || "",
+          organization_name: row[12] || "",
+          job_title: row[13] || "",
+          department: row[14] || "",
+          website: row[15] || "",
+          linkedin: row[16] || "",
+          facebook: row[17] || "",
+          instagram: row[18] || "",
+          relationship: row[19] || "",
+          notes: row[20] || "",
+          is_favorite: row[21] === 1,
+          is_active: row[22] === 1,
         }));
 
         try {
-          const response = await fetch('http://localhost:3001/api/contacts/bulk-import', {
+          const response = await fetch(`${API_BASE_URL}/contacts/bulk-import`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -316,12 +372,12 @@ export default function Contacts() {
       (filterContactType === "" || contact.contact_type === filterContactType) &&
       (filterState === "" || contact.state === filterState) &&
       (filterCity === "" || contact.city === filterCity) &&
-      (filterCountry === "" || contact.country === filterCountry) // New filter condition
+      (filterCountry === "" || contact.country === filterCountry)
     );
   });
 
   const columns = fields
-    .filter((f) => !f.formOnly) // exclude form-only fields
+    .filter((f) => !f.formOnly) 
     .map((f) => ({
       field: f.name,
       headerName: f.label,
@@ -361,6 +417,40 @@ export default function Contacts() {
       },
     ]);
 
+  const accordionSections = [
+    {
+      name: "General",
+      subSections: ["Personal Info", "Contact Type"],
+    },
+    {
+      name: "Info",
+      subSections: ["Professional Info", "Social Media", "Address"],
+    },
+    {
+      name: "Status",
+      subSections: ["Status"],
+    },
+  ];
+
+  const [expandedAccordion, setExpandedAccordion] = React.useState("General");
+
+  const handleAccordionChange = (panel) => (event, isExpanded) => {
+    setExpandedAccordion(isExpanded ? panel : false);
+  };
+
+  const getFieldStyle = (fieldName) => {
+    switch (fieldName) {
+      case 'name_title':
+        return { minWidth: '150px' };
+      case 'country':
+      case 'state':
+      case 'city':
+      case 'contact_type':
+        return { minWidth: '200px' };
+      default:
+        return {};
+    }
+  }
 
   return (
     <Box sx={{ p: 3 }}>
@@ -389,38 +479,48 @@ export default function Contacts() {
 
       {/* Filters */}
       <Box display="flex" gap={2} mb={2} flexWrap="wrap">
-        <TextField label="Title" select sx={{ width: 220 }}
+        <TextField label="Title" select sx={{ width: 100 }}
           value={filterTitle}
           onChange={(e) => setFilterTitle(e.target.value)}
         >
-          {titles.map((title) => (
-            <MenuItem key={title} value={title === "All" ? "" : title}>
+          {titles.map((title, index) => (
+            <MenuItem key={index} value={title === "All" ? "" : title}>
               {title}
             </MenuItem>
           ))}
         </TextField>
 
-        <TextField label="Contact Type" select sx={{ width: 220 }}
+        <TextField label="Contact Type" select sx={{ width: 200 }}
           value={filterContactType}
           onChange={(e) => setFilterContactType(e.target.value)}
         >
-          {types.map((type) => (
+          {types.map((type, index) => (
             <MenuItem
-              key={type}
+              key={index}
               value={type === "All" ? "" : type.replace(".", "")}
             >
               {type}
             </MenuItem>
           ))}
         </TextField>
-
-        <TextField label="State" select sx={{ width: 220 }}
+<TextField label="Country" select sx={{ width: 220 }}
+          value={filterCountry}
+          onChange={(e) => setFilterCountry(e.target.value)}
+        >
+          <MenuItem value="">All</MenuItem>
+          {countries.map((country, index) => (
+            <MenuItem key={index} value={country.name}>
+              {country.name}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField label="State" select sx={{ width: 200 }}
           value={filterState}
           onChange={(e) => setFilterState(e.target.value)}
         >
           <MenuItem value="">All</MenuItem>
-          {states.map((state) => (
-            <MenuItem key={state.name} value={state.name}>
+          {states.map((state, index) => (
+            <MenuItem key={index} value={state.name}>
               {state.name}
             </MenuItem>
           ))}
@@ -431,24 +531,14 @@ export default function Contacts() {
           onChange={(e) => setFilterCity(e.target.value)}
         >
           <MenuItem value="">All</MenuItem>
-          {cities.map((city) => (
-            <MenuItem key={city} value={city}>
+          {cities.map((city, index) => (
+            <MenuItem key={index} value={city}>
               {city}
             </MenuItem>
           ))}
         </TextField>
 
-        <TextField label="Country" select sx={{ width: 220 }}
-          value={filterCountry}
-          onChange={(e) => setFilterCountry(e.target.value)}
-        >
-          <MenuItem value="">All</MenuItem>
-          {countries.map((country) => (
-            <MenuItem key={country.name} value={country.name}>
-              {country.name}
-            </MenuItem>
-          ))}
-        </TextField>
+        
       </Box>
 
       {/* Snackbar */}
@@ -473,335 +563,179 @@ export default function Contacts() {
         sx={{
           height: 600,
           width: "100%",
+          minWidth: 0,
           mt: 3,
           borderRadius: 2,
           bgcolor: "white",
           boxShadow: 3,
-          overflowx: "auto",
+          position: 'relative',
         }}
       >
-        <DataGrid
-          rows={filteredContacts}
-          columns={columns}
-          getRowId={(row) => row.id}
-          checkboxSelection
-          disableColumnMenu
-          disableRowSelectionOnClick
-        initialState={{
-  columns: {
-    columnVisibilityModel: Object.fromEntries(
-      columns.map((col) => [
-        col.field,
-        visible.includes(col.field),
-      ])
-    ),
-  },
-}}
-          sx={{
-            overflow: "auto",
-            border: "none",
-            "& .MuiDataGrid-columnHeaders": {
-              borderTopLeftRadius: "8px",
-              borderTopRightRadius: "8px",
-              backgroundColor: "#f4f6f8",
-              fontWeight: "bold",
-              fontSize: "0.9rem",
-              textAlign: "center",
-            },
-            "& .MuiDataGrid-cell": {
-              fontSize: "0.85rem",
-              wordBreak: "break-word",
-              whiteSpace: "normal",
-              lineHeight: 1.5,
-              textAlign: "center",
-              overflowWrap: "break-word",
-              paddingTop: "15px",
-            },
-          }}
-          showToolbar
-        />
+        <div style={{ overflow: 'auto', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'block', boxSizing: 'border-box' }}>
+          <DataGrid
+            rows={filteredContacts}
+            columns={columns}
+            getRowId={(row) => row.id}
+            checkboxSelection
+            disableColumnMenu
+            disableRowSelectionOnClick
+            slots={{ toolbar: GridToolbar }}
+            disableExtendRowFullWidth={true}
+          initialState={{
+    columns: {
+      columnVisibilityModel: Object.fromEntries(
+        columns.map((col) => [
+          col.field,
+          visible.includes(col.field),
+        ])
+      ),
+    },
+  }}
+            sx={{
+              border: "none",
+              "& .MuiDataGrid-main": {
+                tableLayout: 'fixed',
+              },
+              "& .MuiDataGrid-columnHeaders": {
+                borderTopLeftRadius: "8px",
+                borderTopRightRadius: "8px",
+                backgroundColor: "#f4f6f8",
+                fontWeight: "bold",
+                fontSize: "0.9rem",
+                textAlign: "center",
+              },
+              "& .MuiDataGrid-cell": {
+                fontSize: "0.85rem",
+                wordBreak: "break-word",
+                whiteSpace: "normal",
+                lineHeight: 1.5,
+                textAlign: "center",
+                overflowWrap: "break-word",
+                paddingTop: "15px",
+              },
+            }}
+            showToolbar
+          />
+        </div>
       </Box>
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
           <DialogTitle>{editingContactId ? "Edit Contact" : "Add Contact"}</DialogTitle>
           <DialogContent sx={{ pt: 2 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={3}>
-                <TextField
-                  label="Title"
-                  name="name_title"
-                  value={formData.name_title || ''}
-                  onChange={handleChange}
-                  sx={{ width: "100px" }}
-                  select
+            {accordionSections.map((accordionSection) => (
+              <Accordion
+                key={accordionSection.name}
+                expanded={expandedAccordion === accordionSection.name}
+                onChange={handleAccordionChange(accordionSection.name)}
+              >
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon />}
+                  sx={{ backgroundColor: 'primary.light' }}
                 >
-                  {titles.map((title) => (
-                    <MenuItem key={title} value={title === "All" ? "" : title}>
-                      {title}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={9}>
-                <TextField
-                  label="Full Name"
-                  name="full_name"
-                  value={formData.full_name || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  sx={{ width: "720px" }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Mobile Number"
-                  name="phone"
-                  value={formData.phone || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  sx={{ width: "410px" }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="WhatsApp Number"
-                  name="whatsapp"
-                  value={formData.whatsapp || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  sx={{ width: "410px" }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Email"
-                  name="email"
-                  value={formData.email || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  sx={{ width: "410px" }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Alternate Email"
-                  name="alternate_email"
-                  value={formData.alternate_email || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  sx={{ width: "410px" }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Country"
-                  name="country"
-                  value={formData.country || ''}
-                  onChange={handleCountryChange}
-                  fullWidth
-                  select
-                  sx={{ width: "200px" }}
-                >
-                  <MenuItem value="">Select Country</MenuItem>
-                  {countries.map((country) => (
-                    <MenuItem key={country.name} value={country.name}>
-                      {country.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="State"
-                  name="state"
-                  value={formData.state || ''}
-                  onChange={handleStateChange}
-                  fullWidth
-                  select
-                  sx={{ width: "200px" }}
-                >
-                  <MenuItem value="">Select State</MenuItem>
-                  {states.map((state) => (
-                    <MenuItem key={state.name} value={state.name}>
-                      {state.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="City"
-                  name="city"
-                  value={formData.city || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  select
-                  sx={{ width: "190px" }}
-                >
-                  <MenuItem value="">Select City</MenuItem>
-                  {cities.map((city) => (
-                    <MenuItem key={city} value={city}>
-                      {city}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Postal Code"
-                  name="postal_code"
-                  value={formData.postal_code || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  sx={{ width: "195px" }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Address"
-                  name="address"
-                  value={formData.address || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  multiline
-                  rows={2}
-                  sx={{ width: "835px" }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Contact Type"
-                  name="contact_type"
-                  value={formData.contact_type || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  select
-                  sx={{ width: "133px" }}
-                >
-                  {types.map((type) => (
-                    <MenuItem
-                      key={type}
-                      value={type === "All" ? "" : type.replace(".", "")}
-                    >
-                      {type}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Organization Name"
-                  name="organization_name"
-                  value={formData.organization_name || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  sx={{ width: "230px" }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Job Title"
-                  name="job_title"
-                  value={formData.job_title || ''}
-                  onChange={handleChange}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  label="Department"
-                  name="department"
-                  value={formData.department || ''}
-                  onChange={handleChange}
-                  fullWidth
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Website"
-                  name="website"
-                  value={formData.website || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  sx={{ width: "190px" }}
-                />
-              </Grid>
-              <Grid item xs={4}>
-                <TextField
-                  label="LinkedIn"
-                  name="linkedin"
-                  value={formData.linkedin || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  sx={{ width: "190px" }}
-                />
-              </Grid>
-              <Grid item xs={4}>
-                <TextField
-                  label="Facebook"
-                  name="facebook"
-                  value={formData.facebook || ''}
-                  onChange={handleChange}
-                  fullWidth
-                  sx={{ width: "190px" }}
-                />
-              </Grid>
-              <Grid item xs={4}>
-                <TextField
-                  label="Instagram"
-                  name="instagram"
-                  value={formData.instagram || ''}
-                  onChange={handleChange}
-                  fullWidth
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  label="Relationship"
-                  name="relationship"
-                  value={formData.relationship || ''}
-                  onChange={handleChange}
-                  fullWidth
-                />
-              </Grid>
-
-              <Grid item xs={6}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={formData.is_favorite || false}
-                      onChange={handleChange}
-                      name="is_favorite"
-                    />
-                  }
-                  label="Is Favorite"
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={formData.is_active || false}
-                      onChange={handleChange}
-                      name="is_active"
-                    />
-                  }
-                  label="Is Active"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Notes"
-                  name="notes"
-                  value={formData.notes || ''}
-                  onChange={handleChange}
-                  multiline
-                  rows={4}
-                  fullWidth
-                  sx={{ width: "835px" }}
-                />
-              </Grid>
-            </Grid>
+                  <Typography>{accordionSection.name}</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Grid container spacing={2}>
+                    {fields
+                      .filter((field) =>
+                        accordionSection.subSections.includes(field.section)
+                      )
+                      .map((field, index) => (
+                        <Grid item xs={field.xs} key={index}>
+                          {field.type === "select" ? (
+                            <TextField
+                              label={field.label}
+                              name={field.name}
+                              value={formData[field.name] || ""}
+                              onChange={
+                                field.name === "country"
+                                  ? handleCountryChange
+                                  : field.name === "state"
+                                  ? handleStateChange
+                                  : handleChange
+                              }
+                              fullWidth
+                              select
+                              sx={getFieldStyle(field.name)}
+                              error={!!errors[field.name]}
+                              helperText={errors[field.name]}
+                            >
+                              <MenuItem value="">{`Select ${field.label}`}</MenuItem>
+                              {
+                                field.name === "country"
+                                  ? countries.map((c, i) => (
+                                      <MenuItem key={i} value={c.name}>
+                                        {c.name}
+                                      </MenuItem>
+                                    ))
+                                  : field.name === "state"
+                                  ? states.map((s, i) => (
+                                      <MenuItem key={i} value={s.name}>
+                                        {s.name}
+                                      </MenuItem>
+                                    ))
+                                  : field.name === "city"
+                                  ? cities.map((c, i) => (
+                                      <MenuItem key={i} value={c}>
+                                        {c}
+                                      </MenuItem>
+                                    ))
+                                  : field.name === "contact_type"
+                                  ? types.map((type, i) => (
+                                      <MenuItem
+                                        key={i}
+                                        value={type === "All" ? "" : type.replace(".", "")}
+                                      >
+                                        {type}
+                                      </MenuItem>
+                                    ))
+                                  : field.options.map((opt, i) => (
+                                      <MenuItem key={i} value={opt === "All" ? "" : opt}>
+                                        {opt}
+                                      </MenuItem>
+                                    ))
+                              }
+                            </TextField>
+                          ) : field.type === "multiline" ? (
+                            <TextField
+                              label={field.label}
+                              name={field.name}
+                              value={formData[field.name] || ""}
+                              onChange={handleChange}
+                              fullWidth
+                              multiline
+                              rows={2}
+                              error={!!errors[field.name]}
+                              helperText={errors[field.name]}
+                              sx={{ minWidth: '540px' }}
+                            />
+                          ) : field.type === "checkbox" ? (
+                            <FormControlLabel
+                              control={
+                                <Checkbox
+                                  checked={formData[field.name] || false}
+                                  onChange={handleChange}
+                                  name={field.name}
+                                />
+                              }
+                              label={field.label}
+                            />
+                          ) : (
+                            <TextField
+                              label={field.label}
+                              name={field.name}
+                              value={formData[field.name] || ""}
+                              onChange={handleChange}
+                              fullWidth
+                              error={!!errors[field.name]}
+                              helperText={errors[field.name]}
+                            />
+                          )}
+                        </Grid>
+                      ))}
+                  </Grid>
+                </AccordionDetails>
+              </Accordion>
+            ))}
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose}>Cancel</Button>
