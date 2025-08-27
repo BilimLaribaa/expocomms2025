@@ -13,17 +13,20 @@ import {
   TextField,
   Checkbox,
   FormControlLabel,
-  Accordion, // Added
-  AccordionSummary, // Added
-  AccordionDetails, // Added
+  Accordion, 
+  AccordionSummary,
+  AccordionDetails, 
 } from "@mui/material";
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'; // Added
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'; 
 import MuiAlert from "@mui/material/Alert";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
-import * as XLSX from 'xlsx'; // Import xlsx library
+import * as XLSX from 'xlsx'; 
 import API_BASE_URL from '../config.js';
 
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
+
 export default function Contacts() {
+  const navigate = useNavigate(); // Initialize useNavigate
   const titles = ["All","Mr","Mrs","Ms","Miss","Dr","Er","Adv","Prof",];
   const types = ["All","Business","Personal","Company","Non-Profit","School","Other",];
   const visible = ["id", "full_name", "email", "phone", "whatsapp", "actions"]
@@ -197,29 +200,24 @@ export default function Contacts() {
    fields.forEach(field => {
     const value = formData[field.name];
 
-    // ✅ Custom error for full_name
     if (field.name === 'full_name' && (!value || value.trim() === '')) {
       newErrors[field.name] = 'empty name not allowed';
     }
 
-    // ✅ Custom error for phone
     else if (field.name === 'phone' && (!value || value.trim() === '')) {
       newErrors[field.name] = 'mobile number is required';
     }
 
-    // ✅ Custom error for whatsapp
     else if (field.name === 'whatsapp' && (!value || value.trim() === '')) {
       newErrors[field.name] = 'whatsapp number is required';
     }
 
-    // ✅ Generic required check
     else if (field.required && !value) {
       newErrors[field.name] = `${field.label} is required`;
     }
 
-    // ✅ Phone/WhatsApp number format check
    if ((field.name === 'phone' || field.name === 'whatsapp') && value) {
-  const cleaned = value.replace(/[^0-9+ ]/g, ''); // Allow only digits, +, and space
+  const cleaned = value.replace(/[^0-9+ ]/g, ''); 
 
   if (cleaned.length > 15) {
     newErrors[field.name] = 'Number must be 15 characters or less';
@@ -364,7 +362,6 @@ export default function Contacts() {
       reader.readAsArrayBuffer(file);
     }
   };
-
   // Filtering logic
   const filteredContacts = contacts.filter((contact) => {
     return (
@@ -473,6 +470,10 @@ export default function Contacts() {
           <Button variant="outlined" component="label" color="secondary">
             Import from Excel
             <input type="file" accept=".xlsx, .xls" hidden onChange={onFileChange} />
+          </Button>
+
+          <Button variant="outlined" color="info" href="/excelformat/contacts_format.xlsx" download>
+            Download Excel Format
           </Button>
         </Box>
       </Box>

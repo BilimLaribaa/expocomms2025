@@ -108,30 +108,50 @@ module.exports = (db) => {
 
         const stmt = db.prepare(`INSERT INTO contacts (
             name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 
         db.serialize(() => {
-            db.run("BEGIN TRANSACTION");
-            contacts.forEach(contact => {
-                const { error } = contactSchema.validate(contact);
-                if (error) {
-                    db.run("ROLLBACK");
-                    return res.status(400).json({ "error": error.details[0].message });
-                }
-                const { name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active } = contact;
-                stmt.run(name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite ? 1 : 0, is_active ? 1 : 0);
-            });
-            db.run("COMMIT", (err) => {
-                if (err) {
-                    db.run("ROLLBACK");
-                    res.status(500).json({ "error": err.message });
-                } else {
-                    res.status(201).json({ message: `${contacts.length} contacts imported successfully.` });
-                }
-            });
-        });
+            let transactionActive = false;
+            try {
+                db.run("BEGIN TRANSACTION");
+                transactionActive = true;
 
-        stmt.finalize();
+                for (const contact of contacts) {
+                    const { error } = contactSchema.validate(contact);
+                    if (error) {
+                        throw new Error(error.details[0].message); // Throw to catch and rollback
+                    }
+                    const { name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active } = contact;
+                    stmt.run(name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite ? 1 : 0, is_active ? 1 : 0);
+                }
+
+                db.run("COMMIT", (err) => {
+                    if (err) {
+                        if (transactionActive) { 
+                            db.run("ROLLBACK");
+                        }
+                        res.status(500).json({ "error": err.message });
+                    } else {
+                        res.status(201).json({ message: `${contacts.length} contacts imported successfully.` });
+                    }
+                });
+
+            } catch (e) {
+                if (transactionActive) { 
+                    db.run("ROLLBACK", (rollbackErr) => {
+                        if (rollbackErr) {
+                            console.error("Error during rollback:", rollbackErr.message);
+                        }
+                        console.error("Bulk import error:", e.message); // Add this line
+                        res.status(400).json({ "error": e.message });
+                    });
+                } else {
+                    res.status(400).json({ "error": e.message });
+                }
+            } finally {
+                stmt.finalize();
+            }
+        });
     });
 
     return router;
