@@ -44,6 +44,19 @@ const db = new sqlite3.Database('./contacts.db', (err) => {
         console.error('Error creating table:', err.message);
       } else {
         console.log('Contacts table created or already exists.');
+        db.run(`CREATE TABLE IF NOT EXISTS email_logs (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          recipients TEXT,
+          subject TEXT,
+          message TEXT,
+          sent_at TEXT
+        )`, (err) => {
+          if (err) {
+            console.error('Error creating email_logs table:', err.message);
+          } else {
+            console.log('email_logs table created or already exists.');
+          }
+        });
       }
     });
   }
@@ -54,7 +67,10 @@ app.use(cors());
 app.use(bodyParser.json());
 
 const contactController = require('./contactController')(db);
+const emailController = require('./emailController')(db);
+
 app.use('/api/contacts', contactController);
+app.use('/api/email', emailController);
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);

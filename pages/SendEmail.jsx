@@ -10,6 +10,9 @@ import SearchIcon from '@mui/icons-material/Search';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import AnalyticsIcon from '@mui/icons-material/Analytics';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -44,11 +47,102 @@ import {
   Tabs,
   Tab,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  ListItemSecondaryAction,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 
+const initialTemplates = [
+    { id: 1, name: 'Welcome Message', content: 'Hi {{name}}, welcome to our service!' },
+    { id: 2, name: 'Promotional Offer', content: 'Hello {{name}}, get 20% off on your next purchase!' },
+    { id: 3, name: 'Event Reminder', content: 'Hi {{name}}, just a reminder about the event tomorrow.' },
+];
+
+function ManageTemplatesModal({ open, onClose, templates, setTemplates }) {
+    const [name, setName] = useState('');
+    const [content, setContent] = useState('');
+    const [editingTemplate, setEditingTemplate] = useState(null);
+
+    const handleSave = () => {
+        if (editingTemplate) {
+            setTemplates(templates.map(t => t.id === editingTemplate.id ? { ...t, name, content } : t));
+        } else {
+            setTemplates([...templates, { id: Date.now(), name, content }]);
+        }
+        setName('');
+        setContent('');
+        setEditingTemplate(null);
+    };
+
+    const handleEdit = (template) => {
+        setEditingTemplate(template);
+        setName(template.name);
+        setContent(template.content);
+    };
+
+    const handleDelete = (id) => {
+        setTemplates(templates.filter(t => t.id !== id));
+    };
+
+    return (
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+            <DialogTitle>{editingTemplate ? 'Edit Template' : 'Manage Templates'}</DialogTitle>
+            <DialogContent>
+                <Box display="grid" gridTemplateColumns="2fr 1fr" gap={2}>
+                    <List>
+                        {templates.map(template => (
+                            <ListItem key={template.id}>
+                                <ListItemText primary={template.name} secondary={template.content} />
+                                <ListItemSecondaryAction>
+                                    <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(template)}>
+                                        <EditIcon />
+                                    </IconButton>
+                                    <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(template.id)}>
+                                        <DeleteIcon />
+                                    </IconButton>
+                                </ListItemSecondaryAction>
+                            </ListItem>
+                        ))}
+                    </List>
+                    <Box>
+                        <Typography variant="h6">{editingTemplate ? 'Edit Template' : 'Add New Template'}</Typography>
+                        <TextField
+                            label="Template Name"
+                            fullWidth
+                            margin="normal"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                        <TextField
+                            label="Template Content"
+                            fullWidth
+                            multiline
+                            rows={4}
+                            margin="normal"
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                        />
+                        <Button onClick={handleSave} variant="contained" sx={{ mt: 2 }}>
+                            {editingTemplate ? 'Save Changes' : 'Add Template'}
+                        </Button>
+                    </Box>
+                </Box>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose}>Close</Button>
+            </DialogActions>
+        </Dialog>
+    );
+}
+
 export default function SendEmail() {
-  // Dummy state for layout purposes
-  const [emailLogs] = useState([]);
+  const [emailLogs, setEmailLogs] = useState([]);
   const [scheduledEmails] = useState([]);
   const [deliveryLogs] = useState([]);
   const [deliveryStats] = useState([]);
@@ -58,6 +152,22 @@ export default function SendEmail() {
   const [deliveryLoading, setDeliveryLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
   const [contactsLoading, setContactsLoading] = useState(true);
+  const [templates, setTemplates] = useState(initialTemplates);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+
+  const fetchEmailLogs = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/email/logs');
+      if (response.ok) {
+        const data = await response.json();
+        setEmailLogs(data);
+      } else {
+        console.error('Failed to fetch email logs:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching email logs:', error);
+    }
+  };
 
   React.useEffect(() => {
     const fetchContacts = async () => {
@@ -78,6 +188,7 @@ export default function SendEmail() {
     };
 
     fetchContacts();
+    fetchEmailLogs();
   }, []);
 
   const [emails, setEmails] = useState('');
@@ -85,6 +196,13 @@ export default function SendEmail() {
   const [message, setMessage] = useState('');
   const [attachments] = useState([]);
   const [selectedContacts, setSelectedContacts] = useState([]);
+
+  React.useEffect(() => {
+    const selectedEmails = selectedContacts.map(c => c.email);
+    const manualEmails = emails.split(',').map(e => e.trim()).filter(e => e);
+    const allEmails = [...new Set([...manualEmails, ...selectedEmails])];
+    setEmails(allEmails.join(', '));
+  }, [selectedContacts]);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -100,7 +218,47 @@ export default function SendEmail() {
 
   // Dummy functions for layout purposes
   const handleOpenDeliveryTracking = () => setDeliveryTrackingOpen(true);
-  const handleSendEmail = () => {};
+  const handleSendEmail = async () => {
+    const selectedEmails = selectedContacts.map(c => c.email);
+    const manualEmails = emails.split(',').map(e => e.trim()).filter(e => e);
+    const allEmails = [...new Set([...manualEmails, ...selectedEmails])];
+
+    if (allEmails.length === 0) {
+      setSnackbar({ open: true, message: 'Please select at least one contact or enter an email address.', severity: 'error' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:3001/api/email/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: allEmails.join(', '),
+          subject,
+          html: message,
+        }),
+      });
+      if (response.ok) {
+        setSnackbar({ open: true, message: 'Email sent successfully!', severity: 'success' });
+        setComposerOpen(false);
+        setSubject('');
+        setMessage('');
+        setSelectedContacts([]);
+        setEmails('');
+        fetchEmailLogs();
+      } else {
+        const errorText = await response.text();
+        setSnackbar({ open: true, message: `Failed to send email: ${errorText}`, severity: 'error' });
+      }
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Error sending email.', severity: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
   const handleAttachmentChange = () => {};
   const removeAttachment = () => {};
   const saveDraft = () => {};
@@ -180,6 +338,13 @@ export default function SendEmail() {
   };
 
   const pieChartSeries = deliveryStats.map(stat => stat.count);
+
+  const handleTemplateChange = (event) => {
+    const selectedTemplate = templates.find(t => t.id === event.target.value);
+    if (selectedTemplate) {
+        setMessage(selectedTemplate.content);
+    }
+  };
 
   return (
     <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -449,26 +614,27 @@ export default function SendEmail() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {/* Dummy data for sent emails */}
-                      <TableRow>
-                        <TableCell>1</TableCell>
-                        <TableCell>test@example.com</TableCell>
-                        <TableCell>Test Subject</TableCell>
-                        <TableCell><div dangerouslySetInnerHTML={{ __html: "Test Message" }} /></TableCell>
-                        <TableCell>{new Date().toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            onClick={() => {
-                              setDeliveryTrackingOpen(true);
-                              loadDeliveryLogs(1);
-                            }}
-                          >
-                            View Status
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                      {emailLogs.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell>{log.id}</TableCell>
+                          <TableCell>{log.recipients}</TableCell>
+                          <TableCell>{log.subject}</TableCell>
+                          <TableCell><div dangerouslySetInnerHTML={{ __html: log.message }} /></TableCell>
+                          <TableCell>{new Date(log.sent_at).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              onClick={() => {
+                                setDeliveryTrackingOpen(true);
+                                loadDeliveryLogs(log.id);
+                              }}
+                            >
+                              View Status
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -567,6 +733,24 @@ export default function SendEmail() {
               fullWidth
             />
 
+            <Box sx={{display: 'flex', gap: 1, alignItems: 'center', mb: 1}}>
+                <FormControl sx={{ minWidth: 220 }} size="small">
+                    <InputLabel>Use Template</InputLabel>
+                    <Select onChange={handleTemplateChange} label="Use Template">
+                        {templates.map((template) => (
+                            <MenuItem key={template.id} value={template.id}>
+                            {template.name}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+                <Tooltip title="Manage Templates">
+                    <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setTemplateModalOpen(true)}>
+                        Manage
+                    </Button>
+                </Tooltip>
+            </Box>
+
             {/* Rich editor */}
             <ReactQuill
               value={message}
@@ -611,7 +795,7 @@ export default function SendEmail() {
                 variant="contained"
                 color="primary"
                 startIcon={<SendIcon />}
-                onClick={() => handleSendEmail(undefined, true)}
+                onClick={handleSendEmail}
               >
                 Send Now
               </Button>
@@ -665,17 +849,17 @@ export default function SendEmail() {
 
           <Box display="flex" gap={2} mt={2}>
             <Button
-              variant="contained"
-              onClick={() => {
-                if (!scheduledTime) {
-                  setSnackbar({ open: true, message: 'Pick a date/time first', severity: 'error' });
-                  return;
-                }
-                handleSendEmail(scheduledTime.toISOString(), true);
-              }}
-            >
-              Schedule Email
-            </Button>
+                variant="contained"
+                onClick={() => {
+                  if (!scheduledTime) {
+                    setSnackbar({ open: true, message: 'Pick a date/time first', severity: 'error' });
+                    return;
+                  }
+                  setScheduleOpen(false);
+                }}
+              >
+                Schedule Email
+              </Button>
 
             <Button onClick={() => setScheduleOpen(false)}>Cancel</Button>
           </Box>
@@ -824,6 +1008,13 @@ export default function SendEmail() {
           <div dangerouslySetInnerHTML={{ __html: message }} />
         </Box>
       </Modal>
+
+      <ManageTemplatesModal
+        open={templateModalOpen}
+        onClose={() => setTemplateModalOpen(false)}
+        templates={templates}
+        setTemplates={setTemplates}
+      />
     </Box>
   );
 }

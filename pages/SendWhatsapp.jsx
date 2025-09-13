@@ -200,7 +200,7 @@ function MessageComposerStep({ message, setMessage, templates, openTemplateModal
         }
     };
   return (
-    <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+    <Paper elevation={3} sx={{ p: 4, borderRadius: 2 , width:'1000px' }}>
         <Box sx={{display: 'flex', justifyContent:'space-between', alignItems:'center', mb: 2}}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
                 Craft Your Message
@@ -229,7 +229,7 @@ function MessageComposerStep({ message, setMessage, templates, openTemplateModal
         fullWidth
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        placeholder="Type your message here... e.g., Hello {{name}}"
+        placeholder="Type your message here..."
         variant="outlined"
       />
       <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
