@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Stepper,
   Step,
@@ -60,24 +60,13 @@ import {
   ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { LocalizationProvider, DateTimePicker } from '@mui/x-date-pickers';
+import API_BASE_URL from '../config';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 
-// For more advanced charts, consider a library like Recharts or Chart.js
-
-const initialTemplates = [
-    { id: 1, name: 'Welcome Message', content: 'Hi {{name}}, welcome to our service!' },
-    { id: 2, name: 'Promotional Offer', content: 'Hello {{name}}, get 20% off on your next purchase!' },
-    { id: 3, name: 'Event Reminder', content: 'Hi {{name}}, just a reminder about the event tomorrow.' },
-];
-
 const senderAccounts = ['Account 1', 'Account 2', 'Account 3'];
 
-const contacts = [
-  { id: 1, name: 'John Doe', phone: '+1234567890' },
-  { id: 2, name: 'Jane Smith', phone: '+1987654321' },
-  { id: 3, name: 'Peter Jones', phone: '+1122334455' },
-];
+
 
 const contactGroups = [
   { id: 1, name: 'Family' },
@@ -112,149 +101,162 @@ const PageHeader = () => (
   </AppBar>
 );
 
-function ManageTemplatesModal({ open, onClose, templates, setTemplates }) {
+function AddContactModal({ open, onClose, setContacts }) {
     const [name, setName] = useState('');
-    const [content, setContent] = useState('');
-    const [editingTemplate, setEditingTemplate] = useState(null);
+    const [phone, setPhone] = useState('');
 
     const handleSave = () => {
-        if (editingTemplate) {
-            setTemplates(templates.map(t => t.id === editingTemplate.id ? { ...t, name, content } : t));
-        } else {
-            setTemplates([...templates, { id: Date.now(), name, content }]);
-        }
-        setName('');
-        setContent('');
-        setEditingTemplate(null);
-    };
+        const newContact = { full_name: name, phone: phone };
 
-    const handleEdit = (template) => {
-        setEditingTemplate(template);
-        setName(template.name);
-        setContent(template.content);
-    };
-
-    const handleDelete = (id) => {
-        setTemplates(templates.filter(t => t.id !== id));
+        fetch(`${API_BASE_URL}/contacts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(newContact),
+        })
+        .then(res => res.json())
+        .then(data => {
+            setContacts(prevContacts => [...prevContacts, data]);
+            setName('');
+            setPhone('');
+            onClose();
+        })
+        .catch(error => console.error('Error adding contact:', error));
     };
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-            <DialogTitle>{editingTemplate ? 'Edit Template' : 'Manage Templates'}</DialogTitle>
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+            <DialogTitle>Add New Contact</DialogTitle>
             <DialogContent>
-                <Grid container spacing={2}>
-                    <Grid item xs={12} md={8}>
-                        <Typography variant="h6">Templates</Typography>
-                        <List>
-                            {templates.map(template => (
-                                <ListItem key={template.id}>
-                                    <ListItemText primary={template.name} secondary={template.content} />
-                                    <ListItemSecondaryAction>
-                                        <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(template)}>
-                                            <EditIcon />
-                                        </IconButton>
-                                        <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(template.id)}>
-                                            <DeleteIcon />
-                                        </IconButton>
-                                    </ListItemSecondaryAction>
-                                </ListItem>
-                            ))}
-                        </List>
-                    </Grid>
-                    <Grid item xs={12} md={4}>
-                        <Typography variant="h6">{editingTemplate ? 'Edit Template' : 'Add New Template'}</Typography>
-                        <TextField
-                            label="Template Name"
-                            fullWidth
-                            margin="normal"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                        />
-                        <TextField
-                            label="Template Content"
-                            fullWidth
-                            multiline
-                            rows={4}
-                            margin="normal"
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                        />
-                        <Button onClick={handleSave} variant="contained" sx={{ mt: 2 }}>
-                            {editingTemplate ? 'Save Changes' : 'Add Template'}
-                        </Button>
-                    </Grid>
-                </Grid>
+                <TextField
+                    autoFocus
+                    margin="dense"
+                    label="Full Name"
+                    type="text"
+                    fullWidth
+                    variant="standard"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                />
+                <TextField
+                    margin="dense"
+                    label="Phone Number"
+                    type="text"
+                    fullWidth
+                    variant="standard"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                />
             </DialogContent>
             <DialogActions>
-                <Button onClick={onClose}>Close</Button>
+                <Button onClick={onClose}>Cancel</Button>
+                <Button onClick={handleSave}>Save</Button>
             </DialogActions>
         </Dialog>
     );
 }
 
-function MessageComposerStep({ message, setMessage, templates, openTemplateModal }) {
+function MessageComposerStep({ message, setMessage, templates, setSelectedTemplateName, messageMode, setMessageMode, setSelectedTemplateContent, selectedTemplateContent, templateImageUrl, setTemplateImageUrl }) {
     const handleTemplateChange = (event) => {
         const selectedTemplate = templates.find(t => t.id === event.target.value);
         if (selectedTemplate) {
-            setMessage(selectedTemplate.content);
+            setSelectedTemplateName(selectedTemplate.name);
+            const bodyComponent = selectedTemplate.components.find(c => c.type === 'BODY');
+            if (bodyComponent && bodyComponent.text) {
+                setMessage(bodyComponent.text);
+                setSelectedTemplateContent(bodyComponent.text);
+            } else {
+                // If no body component or text, use template name as a fallback message
+                setMessage(selectedTemplate.name || '');
+                setSelectedTemplateContent(selectedTemplate.name || '');
+            }
         }
     };
-  return (
-    <Paper elevation={3} sx={{ p: 4, borderRadius: 2 , width:'1000px' }}>
-        <Box sx={{display: 'flex', justifyContent:'space-between', alignItems:'center', mb: 2}}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                Craft Your Message
-            </Typography>
-            <Box sx={{display: 'flex', gap: 1}}>
-                <FormControl sx={{ minWidth: 220 }} size="small">
-                    <InputLabel>Use Template</InputLabel>
-                    <Select onChange={handleTemplateChange} label="Use Template">
-                        {templates.map((template) => (
-                            <MenuItem key={template.id} value={template.id}>
-                            {template.name}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-                <Tooltip title="Manage Templates">
-                    <Button variant="outlined" startIcon={<AddIcon />} onClick={openTemplateModal}>
-                        Manage
-                    </Button>
-                </Tooltip>
-            </Box>
+
+    return (
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
+            {messageMode === 'template' && selectedTemplateContent && (
+                <Paper elevation={3} sx={{ p: 4, borderRadius: 2, flex: 1 }}>
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                        Template Preview
+                    </Typography>
+                    <Box sx={{ border: '1px solid #ccc', p: 2, borderRadius: 1, minHeight: 200, whiteSpace: 'pre-wrap' }}>
+                        <Typography variant="body1">
+                            {selectedTemplateContent}
+                        </Typography>
+                    </Box>
+                </Paper>
+            )}
+            <Paper elevation={3} sx={{ p: 4, borderRadius: 2, flex: 1 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                        Craft Your Message
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button onClick={() => setMessageMode('manual')} variant={messageMode === 'manual' ? 'contained' : 'outlined'}>Manual</Button>
+                        <Button onClick={() => setMessageMode('template')} variant={messageMode === 'template' ? 'contained' : 'outlined'}>Template</Button>
+                    </Box>
+                </Box>
+
+                {messageMode === 'template' && (
+                    <>
+                        <FormControl fullWidth sx={{ mb: 2 }}>
+                            <InputLabel>Use Template</InputLabel>
+                            <Select onChange={handleTemplateChange} label="Use Template">
+                                {templates.map((template) => (
+                                    <MenuItem key={template.id} value={template.id}>
+                                        {template.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <TextField
+                            fullWidth
+                            label="Image URL (for template header)"
+                            variant="outlined"
+                            value={templateImageUrl}
+                            onChange={(e) => setTemplateImageUrl(e.target.value)}
+                            sx={{ mb: 2 }}
+                        />
+                    </>
+                )}
+
+                <TextField
+                    multiline
+                    rows={10}
+                    fullWidth
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Type your message here..."
+                    variant="outlined"
+                    disabled={messageMode === 'template' && !message}
+                />
+                <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                    <Tooltip title="Add Emoji">
+                        <IconButton color="primary">
+                            <EmojiEmotionsIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Attach File (Image, PDF, Doc)">
+                        <IconButton color="primary">
+                            <AttachFileIcon />
+                        </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Preview Message">
+                        <Button variant="outlined" startIcon={<PreviewIcon />}>
+                            Preview
+                        </Button>
+                    </Tooltip>
+                </Box>
+            </Paper>
         </Box>
-      <TextField
-        multiline
-        rows={10}
-        fullWidth
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        placeholder="Type your message here..."
-        variant="outlined"
-      />
-      <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-        <Tooltip title="Add Emoji">
-          <IconButton color="primary">
-            <EmojiEmotionsIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Attach File (Image, PDF, Doc)">
-          <IconButton color="primary">
-            <AttachFileIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Preview Message">
-          <Button variant="outlined" startIcon={<PreviewIcon />}>
-            Preview
-          </Button>
-        </Tooltip>
-      </Box>
-    </Paper>
-  );
+    );
 }
 
-function ContactSelectorStep({ selectedContacts, setSelectedContacts }) {
+function ContactSelectorStep({ contacts, selectedContacts, setSelectedContacts, openContactModal }) {
   const [selectedTab, setSelectedTab] = useState(0);
+  const [manualPhone, setManualPhone] = useState('');
 
   const handleTabChange = (event, newValue) => {
     setSelectedTab(newValue);
@@ -271,11 +273,37 @@ function ContactSelectorStep({ selectedContacts, setSelectedContacts }) {
     setSelectedContacts(newSelected);
   };
 
+  const handleAddManualPhone = () => {
+    if (manualPhone && !selectedContacts.includes(manualPhone)) {
+       
+        const tempId = `manual_${manualPhone}`;
+        const newSelected = [...selectedContacts, tempId];
+        setSelectedContacts(newSelected);
+
+        setManualPhone('');
+    }
+  };
+
   return (
     <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
             Choose Your Audience
         </Typography>
+        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <TextField
+                label="Manually Add Phone Number"
+                variant="outlined"
+                size="small"
+                value={manualPhone}
+                onChange={(e) => setManualPhone(e.target.value)}
+            />
+            <Button onClick={handleAddManualPhone} variant="contained" startIcon={<AddIcon />}>
+                Add
+            </Button>
+            <Button variant="outlined" startIcon={<AddIcon />} onClick={openContactModal}>
+                Add New Contact
+            </Button>
+        </Box>
         <Tabs value={selectedTab} onChange={handleTabChange} variant="fullWidth">
             <Tab icon={<PersonIcon />} label="Contacts" />
             <Tab icon={<GroupIcon />} label="Groups" />
@@ -299,9 +327,9 @@ function ContactSelectorStep({ selectedContacts, setSelectedContacts }) {
                     onClick={handleContactToggle(contact.id)}
                 >
                     <ListItemAvatar>
-                    <Avatar>{contact.name.charAt(0)}</Avatar>
+                    <Avatar>{contact.full_name ? contact.full_name.charAt(0) : ''}</Avatar>
                     </ListItemAvatar>
-                    <ListItemText primary={contact.name} secondary={contact.phone} />
+                    <ListItemText primary={contact.full_name} secondary={contact.phone} />
                     <Checkbox
                     edge="end"
                     checked={selectedContacts.indexOf(contact.id) !== -1}
@@ -378,66 +406,6 @@ function ReviewSendStep({ message, selectedContacts, schedule, setSchedule }) {
   );
 }
 
-function AnalysisSection() {
-    const recentCampaigns = [
-        {
-            name: "Welcome Campaign", status: "Completed", date: "2023-10-26",
-            analytics: { total: 500, sent: 500, delivered: 480, seen: 450, failed: 20 }
-        },
-        {
-            name: "Q4 Promotion", status: "In Progress", date: "2023-10-27",
-            analytics: { total: 1000, sent: 750, delivered: 700, seen: 600, failed: 50 }
-        },
-        {
-            name: "Holiday Special", status: "Scheduled", date: "2023-11-01",
-            analytics: { total: 2000, sent: 0, delivered: 0, seen: 0, failed: 0 }
-        },
-    ];
-
-    return (
-        <Box sx={{ mt: 6 }}>
-            <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
-                Campaign Analytics
-            </Typography>
-            <Grid container spacing={3}>
-                <Grid item xs={12}>
-                    <Paper elevation={3} sx={{ p: 3, borderRadius: 2 ,width:'1000px'}}>
-                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>Recent Campaigns</Typography>
-                        {recentCampaigns.map((campaign, index) => (
-                            <Accordion key={index} sx={{ my: 1 }}>
-                                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                    <Grid container alignItems="center">
-                                        <Grid item xs={6}><Typography>{campaign.name}</Typography></Grid>
-                                        <Grid item xs={3}><Typography color="text.secondary">{campaign.date}</Typography></Grid>
-                                        <Grid item xs={3}><Chip label={campaign.status} color={campaign.status === 'Completed' ? 'success' : campaign.status === 'In Progress' ? 'warning' : 'default'} /></Grid>
-                                    </Grid>
-                                </AccordionSummary>
-                                <AccordionDetails>
-                                    <Grid container spacing={2}>
-                                        <Grid item xs={6} sm={3}><Typography>Total: {campaign.analytics.total}</Typography></Grid>
-                                        <Grid item xs={6} sm={3}><Typography>Sent: {campaign.analytics.sent}</Typography></Grid>
-                                        <Grid item xs={6} sm={3}><Typography>Delivered: {campaign.analytics.delivered}</Typography></Grid>
-                                        <Grid item xs={6} sm={3}><Typography>Seen: {campaign.analytics.seen}</Typography></Grid>
-                                        <Grid item xs={12}>
-                                            <Box sx={{ mt: 2 }}>
-                                                <Typography variant="body2">Delivery Rate</Typography>
-                                                <LinearProgress variant="determinate" value={(campaign.analytics.delivered / campaign.analytics.sent) * 100 || 0} />
-                                            </Box>
-                                            <Box sx={{ mt: 2 }}>
-                                                <Typography variant="body2">Seen Rate</Typography>
-                                                <LinearProgress variant="determinate" value={(campaign.analytics.seen / campaign.analytics.delivered) * 100 || 0} color="success" />
-                                            </Box>
-                                        </Grid>
-                                    </Grid>
-                                </AccordionDetails>
-                            </Accordion>
-                        ))}
-                    </Paper>
-                </Grid>
-            </Grid>
-        </Box>
-    );
-}
 
 export default function SendWhatsapp() {
   const [activeStep, setActiveStep] = useState(0);
@@ -447,8 +415,31 @@ export default function SendWhatsapp() {
   const [loading, setLoading] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [templates, setTemplates] = useState(initialTemplates);
-  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [selectedTemplateName, setSelectedTemplateName] = useState('');
+  const [messageMode, setMessageMode] = useState('manual');
+  const [selectedTemplateContent, setSelectedTemplateContent] = useState('');
+  const [templateImageUrl, setTemplateImageUrl] = useState('');
+  
+
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/contacts`)
+      .then(res => res.json())
+      .then(data => setContacts(data))
+      .catch(error => console.error('Error fetching contacts:', error));
+
+    fetch(`${API_BASE_URL}/whatsapp-templates`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.data) {
+          setTemplates(data.data);
+        }
+      })
+      .catch(error => console.error('Error fetching whatsapp templates:', error));
+  }, []);
 
   const handleNext = () => setActiveStep((prev) => prev + 1);
   const handleBack = () => setActiveStep((prev) => prev - 1);
@@ -467,22 +458,59 @@ export default function SendWhatsapp() {
 
   const handleSendNow = () => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setToastMessage('Message sent successfully!');
-      setShowSuccessToast(true);
-      setActiveStep(0);
-      setMessage('');
-      setSelectedContacts([]);
-    }, 2000);
+
+    const selectedContactDetails = selectedContacts.map(contactId => {
+        if (typeof contactId === 'string' && contactId.startsWith('manual_')) {
+            return { id: contactId, phone: contactId.replace('manual_', '') };
+        }
+        return contacts.find(c => c.id === contactId);
+    });
+
+    const promises = selectedContactDetails.map(contact => {
+        if (contact && contact.phone) {
+            const payload = messageMode === 'template'
+                ? { to: contact.phone, template: selectedTemplateName, imageUrl: templateImageUrl }
+                : { to: contact.phone, message: message };
+
+            return fetch(`${API_BASE_URL}/send-whatsapp`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+        }
+        return Promise.resolve(); // Resolve for contacts without phone numbers
+    });
+
+    Promise.all(promises)
+        .then(responses => {
+            setLoading(false);
+            const failedCount = responses.filter(res => res && !res.ok).length;
+            if (failedCount > 0) {
+                setToastMessage(`${failedCount} messages failed to send.`);
+            } else {
+                setToastMessage('Messages sent successfully!');
+            }
+            setShowSuccessToast(true);
+            setActiveStep(0);
+            setMessage('');
+            setSelectedContacts([]);
+        })
+        .catch(error => {
+            setLoading(false);
+            setToastMessage('An error occurred while sending messages.');
+            setShowSuccessToast(true);
+            console.error('Error sending whatsapp messages:', error);
+        });
     };
 
   const getStepContent = (step) => {
     switch (step) {
       case 0:
-        return <MessageComposerStep message={message} setMessage={setMessage} templates={templates} openTemplateModal={() => setTemplateModalOpen(true)} />;
+        return <MessageComposerStep message={message} setMessage={setMessage} templates={templates} setSelectedTemplateName={setSelectedTemplateName} messageMode={messageMode} setMessageMode={setMessageMode} setSelectedTemplateContent={setSelectedTemplateContent} selectedTemplateContent={selectedTemplateContent} templateImageUrl={templateImageUrl} setTemplateImageUrl={setTemplateImageUrl} />;
       case 1:
-        return <ContactSelectorStep selectedContacts={selectedContacts} setSelectedContacts={setSelectedContacts} />;
+        return <ContactSelectorStep contacts={contacts} selectedContacts={selectedContacts} setSelectedContacts={setSelectedContacts} openContactModal={() => setContactModalOpen(true)} />;
       case 2:
         return <ReviewSendStep message={message} selectedContacts={selectedContacts} schedule={schedule} setSchedule={setSchedule} />;
       default:
@@ -500,8 +528,8 @@ export default function SendWhatsapp() {
           </Step>
         ))}
       </Stepper>
-      <Grid container justifyContent="center">
-        <Grid item xs={12} md={10} lg={8}>
+      <Grid container spacing={2} justifyContent="center">
+        <Grid item xs={12} sm={12} md={12}>
           {getStepContent(activeStep)}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 3 }}>
             <Button disabled={activeStep === 0} onClick={handleBack}>
@@ -539,13 +567,8 @@ export default function SendWhatsapp() {
           </Box>
         </Grid>
       </Grid>
-      <AnalysisSection />
-      <ManageTemplatesModal
-        open={templateModalOpen}
-        onClose={() => setTemplateModalOpen(false)}
-        templates={templates}
-        setTemplates={setTemplates}
-      />
+   
+      <AddContactModal open={contactModalOpen} onClose={() => setContactModalOpen(false)} setContacts={setContacts} />
       <Snackbar
         open={showSuccessToast}
         autoHideDuration={6000}

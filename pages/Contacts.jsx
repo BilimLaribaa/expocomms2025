@@ -92,7 +92,13 @@ export default function Contacts() {
 
   const handleOpen = (contact = null) => {
     if (contact) {
-      setFormData(contact);
+      const newFormData = { ...contact };
+      fields.forEach(field => {
+        if (field.type !== 'checkbox' && newFormData[field.name] === null) {
+          newFormData[field.name] = '';
+        }
+      });
+      setFormData(newFormData);
       setEditingContactId(contact.id);
     } else {
       setFormData({});
@@ -268,8 +274,8 @@ export default function Contacts() {
         setFormData({}); 
         setEditingContactId(null); 
       } else {
-        console.error(`Failed to ${editingContactId ? 'update' : 'create'} contact:`, response.statusText);
-        
+        const errorData = await response.json();
+        console.error(`Failed to ${editingContactId ? 'update' : 'create'} contact:`, errorData.error);
       }
     } catch (error) {
       console.error('Error submitting form:', error);

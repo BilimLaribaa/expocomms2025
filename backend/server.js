@@ -68,9 +68,14 @@ app.use(bodyParser.json());
 
 const contactController = require('./contactController')(db);
 const emailController = require('./emailController')(db);
+const whatsappController = require('./whatsappController');
+const whatsappRouter = express.Router();
+whatsappRouter.post('/send-whatsapp', whatsappController.sendWhatsappMessage);
+whatsappRouter.get('/whatsapp-templates', whatsappController.getWhatsappTemplates);
 
 app.use('/api/contacts', contactController);
 app.use('/api/email', emailController);
+app.use('/api', whatsappRouter);
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);

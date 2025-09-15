@@ -13,6 +13,7 @@ import AttachFileIcon from '@mui/icons-material/AttachFile';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import API_BASE_URL from '../config';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
@@ -157,7 +158,7 @@ export default function SendEmail() {
 
   const fetchEmailLogs = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/email/logs');
+      const response = await fetch(`${API_BASE_URL}/email/logs`);
       if (response.ok) {
         const data = await response.json();
         setEmailLogs(data);
@@ -173,7 +174,7 @@ export default function SendEmail() {
     const fetchContacts = async () => {
       setContactsLoading(true);
       try {
-        const response = await fetch('http://localhost:3001/api/contacts');
+        const response = await fetch(`${API_BASE_URL}/contacts`);
         if (response.ok) {
           const data = await response.json();
           setContacts(data);
@@ -230,7 +231,7 @@ export default function SendEmail() {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/email/send', {
+      const response = await fetch(`${API_BASE_URL}/email/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
