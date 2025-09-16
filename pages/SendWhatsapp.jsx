@@ -177,7 +177,7 @@ function MessageComposerStep({ message, setMessage, templates, setSelectedTempla
     return (
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
             {messageMode === 'template' && selectedTemplateContent && (
-                <Paper elevation={3} sx={{ p: 4, borderRadius: 2, flex: 1 }}>
+                <Paper elevation={3} sx={{ p: 4, borderRadius: 2, flex: 1}}>
                     <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
                         Template Preview
                     </Typography>

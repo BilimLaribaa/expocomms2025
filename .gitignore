@@ -2,3 +2,8 @@
 /backend/node_modules
 /.env
 /backend/.env
+/dist
+contacts.db
+/backend/contacts.db
+
+
