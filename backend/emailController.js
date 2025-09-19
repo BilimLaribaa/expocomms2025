@@ -56,5 +56,18 @@ module.exports = function(db) {
     });
   });
 
+  router.delete('/logs/:id', (req, res) => {
+    const { id } = req.params;
+    db.run(`DELETE FROM email_logs WHERE id = ?`, [id], function(err) {
+      if (err) {
+        return res.status(500).send(err.message);
+      }
+      if (this.changes === 0) {
+        return res.status(404).send({ message: "Log not found" });
+      }
+      res.status(200).send({ message: "Log deleted successfully" });
+    });
+  });
+
   return router;
 }

@@ -636,7 +636,7 @@ export default function Contacts() {
               >
                 <AccordionSummary
                   expandIcon={<ExpandMoreIcon />}
-                  sx={{ backgroundColor: 'primary.light' }}
+                  sx={{ backgroundColor: 'lightgray' }}
                 >
                   <Typography>{accordionSection.name}</Typography>
                 </AccordionSummary>

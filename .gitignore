@@ -5,5 +5,5 @@
 /dist
 contacts.db
 /backend/contacts.db
-
+*.db
 

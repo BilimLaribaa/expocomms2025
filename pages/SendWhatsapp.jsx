@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Stepper,
   Step,
@@ -66,15 +66,7 @@ import dayjs from 'dayjs';
 
 const senderAccounts = ['Account 1', 'Account 2', 'Account 3'];
 
-
-
-const contactGroups = [
-  { id: 1, name: 'Family' },
-  { id: 2, name: 'Friends' },
-  { id: 3, name: 'Work' },
-];
-
-const steps = ['Compose Message', 'Select Contacts', 'Review & Send'];
+const steps = ['Select Template', 'Select Contacts', 'Review & Send'];
 
 const PageHeader = () => (
   <AppBar position="static" color="transparent" elevation={0} sx={{ mb: 4 }}>
@@ -104,9 +96,10 @@ const PageHeader = () => (
 function AddContactModal({ open, onClose, setContacts }) {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
+    const [contactType, setContactType] = useState('');
 
     const handleSave = () => {
-        const newContact = { full_name: name, phone: phone };
+        const newContact = { full_name: name, phone: phone, contact_type: contactType };
 
         fetch(`${API_BASE_URL}/contacts`, {
             method: 'POST',
@@ -120,6 +113,7 @@ function AddContactModal({ open, onClose, setContacts }) {
             setContacts(prevContacts => [...prevContacts, data]);
             setName('');
             setPhone('');
+            setContactType('');
             onClose();
         })
         .catch(error => console.error('Error adding contact:', error));
@@ -148,6 +142,15 @@ function AddContactModal({ open, onClose, setContacts }) {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                 />
+                <TextField
+                    margin="dense"
+                    label="Contact Type"
+                    type="text"
+                    fullWidth
+                    variant="standard"
+                    value={contactType}
+                    onChange={(e) => setContactType(e.target.value)}
+                />
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>Cancel</Button>
@@ -157,97 +160,62 @@ function AddContactModal({ open, onClose, setContacts }) {
     );
 }
 
-function MessageComposerStep({ message, setMessage, templates, setSelectedTemplateName, messageMode, setMessageMode, setSelectedTemplateContent, selectedTemplateContent, templateImageUrl, setTemplateImageUrl }) {
-    const handleTemplateChange = (event) => {
-        const selectedTemplate = templates.find(t => t.id === event.target.value);
-        if (selectedTemplate) {
-            setSelectedTemplateName(selectedTemplate.name);
-            const bodyComponent = selectedTemplate.components.find(c => c.type === 'BODY');
-            if (bodyComponent && bodyComponent.text) {
-                setMessage(bodyComponent.text);
-                setSelectedTemplateContent(bodyComponent.text);
-            } else {
-                // If no body component or text, use template name as a fallback message
-                setMessage(selectedTemplate.name || '');
-                setSelectedTemplateContent(selectedTemplate.name || '');
-            }
+function MessageComposerStep({ message, setMessage, templates, setSelectedTemplateName, setSelectedTemplateContent, selectedTemplateContent, templateImageUrl, setTemplateImageUrl }) {
+    const handleTemplateChange = (template) => {
+        setSelectedTemplateName(template.name);
+        const bodyComponent = template.components.find(c => c.type === 'BODY');
+        if (bodyComponent && bodyComponent.text) {
+            setMessage(bodyComponent.text);
+            setSelectedTemplateContent(bodyComponent.text);
+        } else {
+            setMessage(template.name || '');
+            setSelectedTemplateContent(template.name || '');
         }
     };
 
     return (
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2 }}>
-            {messageMode === 'template' && selectedTemplateContent && (
-                <Paper elevation={3} sx={{ p: 4, borderRadius: 2, flex: 1}}>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                        Template Preview
-                    </Typography>
-                    <Box sx={{ border: '1px solid #ccc', p: 2, borderRadius: 1, minHeight: 200, whiteSpace: 'pre-wrap' }}>
-                        <Typography variant="body1">
-                            {selectedTemplateContent}
-                        </Typography>
-                    </Box>
-                </Paper>
-            )}
             <Paper elevation={3} sx={{ p: 4, borderRadius: 2, flex: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                        Craft Your Message
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                        <Button onClick={() => setMessageMode('manual')} variant={messageMode === 'manual' ? 'contained' : 'outlined'}>Manual</Button>
-                        <Button onClick={() => setMessageMode('template')} variant={messageMode === 'template' ? 'contained' : 'outlined'}>Template</Button>
-                    </Box>
-                </Box>
-
-                {messageMode === 'template' && (
-                    <>
-                        <FormControl fullWidth sx={{ mb: 2 }}>
-                            <InputLabel>Use Template</InputLabel>
-                            <Select onChange={handleTemplateChange} label="Use Template">
-                                {templates.map((template) => (
-                                    <MenuItem key={template.id} value={template.id}>
-                                        {template.name}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                        <TextField
-                            fullWidth
-                            label="Image URL (for template header)"
-                            variant="outlined"
-                            value={templateImageUrl}
-                            onChange={(e) => setTemplateImageUrl(e.target.value)}
-                            sx={{ mb: 2 }}
-                        />
-                    </>
-                )}
-
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    Select a Template
+                </Typography>
+                <List sx={{ maxHeight: 400, overflow: 'auto', mb: 2 }}>
+                    {templates.map((template) => (
+                        <Card
+                            key={template.id}
+                            sx={{
+                                mb: 2,
+                                cursor: 'pointer',
+                                border: selectedTemplateContent === (template.components.find(c => c.type === 'BODY')?.text || template.name || '') ? '2px solid #1976d2' : '1px solid #ccc',
+                                boxShadow: selectedTemplateContent === (template.components.find(c => c.type === 'BODY')?.text || template.name || '') ? 3 : 1,
+                            }}
+                            onClick={() => handleTemplateChange(template)}
+                        >
+                            <CardContent>
+                                <Typography variant="h6" component="div">
+                                    {template.name}
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </List>
                 <TextField
-                    multiline
-                    rows={10}
                     fullWidth
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type your message here..."
+                    label="Image URL (for template header)"
                     variant="outlined"
-                    disabled={messageMode === 'template' && !message}
+                    value={templateImageUrl}
+                    onChange={(e) => setTemplateImageUrl(e.target.value)}
+                    sx={{ mb: 2 }}
                 />
-                <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                    <Tooltip title="Add Emoji">
-                        <IconButton color="primary">
-                            <EmojiEmotionsIcon />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Attach File (Image, PDF, Doc)">
-                        <IconButton color="primary">
-                            <AttachFileIcon />
-                        </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Preview Message">
-                        <Button variant="outlined" startIcon={<PreviewIcon />}>
-                            Preview
-                        </Button>
-                    </Tooltip>
+            </Paper>
+            <Paper elevation={3} sx={{ p: 4, borderRadius: 2, flex: 1 }}>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    Template Preview
+                </Typography>
+                <Box sx={{ border: '1px solid #ccc', p: 2, borderRadius: 1, minHeight: 200, whiteSpace: 'pre-wrap' }}>
+                    <Typography variant="body1">
+                        {selectedTemplateContent || 'please, select the template to display template preview here'}
+                    </Typography>
                 </Box>
             </Paper>
         </Box>
@@ -256,7 +224,21 @@ function MessageComposerStep({ message, setMessage, templates, setSelectedTempla
 
 function ContactSelectorStep({ contacts, selectedContacts, setSelectedContacts, openContactModal }) {
   const [selectedTab, setSelectedTab] = useState(0);
-  const [manualPhone, setManualPhone] = useState('');
+
+  const contactGroups = useMemo(() => {
+    const groups = contacts.reduce((acc, contact) => {
+      const groupName = contact.contact_type || 'Uncategorized';
+      if (!acc[groupName]) {
+        acc[groupName] = [];
+      }
+      acc[groupName].push(contact.id);
+      return acc;
+    }, {});
+    return Object.keys(groups).map(groupName => ({
+      name: groupName,
+      contactIds: groups[groupName],
+    }));
+  }, [contacts]);
 
   const handleTabChange = (event, newValue) => {
     setSelectedTab(newValue);
@@ -273,15 +255,40 @@ function ContactSelectorStep({ contacts, selectedContacts, setSelectedContacts, 
     setSelectedContacts(newSelected);
   };
 
-  const handleAddManualPhone = () => {
-    if (manualPhone && !selectedContacts.includes(manualPhone)) {
-       
-        const tempId = `manual_${manualPhone}`;
-        const newSelected = [...selectedContacts, tempId];
-        setSelectedContacts(newSelected);
+  const handleGroupToggle = (contactIds) => () => {
+    const newSelected = [...selectedContacts];
+    const allContactsInGroupSelected = contactIds.every(id => newSelected.includes(id));
 
-        setManualPhone('');
+    if (allContactsInGroupSelected) {
+      // Deselect all contacts in the group
+      contactIds.forEach(id => {
+        const index = newSelected.indexOf(id);
+        if (index > -1) {
+          newSelected.splice(index, 1);
+        }
+      });
+    } else {
+      // Select all contacts in the group
+      contactIds.forEach(id => {
+        if (!newSelected.includes(id)) {
+          newSelected.push(id);
+        }
+      });
     }
+    setSelectedContacts(newSelected);
+  };
+
+  const handleSelectAll = () => {
+    if (selectedTab === 0) {
+      setSelectedContacts(contacts.map(c => c.id));
+    } else {
+      const allContactIds = contactGroups.flatMap(g => g.contactIds);
+      setSelectedContacts([...new Set([...selectedContacts, ...allContactIds])]);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedContacts([]);
   };
 
   return (
@@ -289,21 +296,9 @@ function ContactSelectorStep({ contacts, selectedContacts, setSelectedContacts, 
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
             Choose Your Audience
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <TextField
-                label="Manually Add Phone Number"
-                variant="outlined"
-                size="small"
-                value={manualPhone}
-                onChange={(e) => setManualPhone(e.target.value)}
-            />
-            <Button onClick={handleAddManualPhone} variant="contained" startIcon={<AddIcon />}>
-                Add
-            </Button>
-            <Button variant="outlined" startIcon={<AddIcon />} onClick={openContactModal}>
-                Add New Contact
-            </Button>
-        </Box>
+        <Button variant="outlined" startIcon={<AddIcon />} onClick={openContactModal} sx={{ mb: 2 }}>
+            Add New Contact
+        </Button>
         <Tabs value={selectedTab} onChange={handleTabChange} variant="fullWidth">
             <Tab icon={<PersonIcon />} label="Contacts" />
             <Tab icon={<GroupIcon />} label="Groups" />
@@ -341,17 +336,21 @@ function ContactSelectorStep({ contacts, selectedContacts, setSelectedContacts, 
             {selectedTab === 1 && (
             <List dense>
                 {contactGroups.map((group) => (
-                <ListItem key={group.id} button>
+                <ListItem key={group.name} button onClick={handleGroupToggle(group.contactIds)}>
                     <ListItemText primary={group.name} />
-                    <Checkbox edge="end" />
+                    <Checkbox
+                        edge="end"
+                        checked={group.contactIds.every(id => selectedContacts.includes(id))}
+                        indeterminate={!group.contactIds.every(id => selectedContacts.includes(id)) && group.contactIds.some(id => selectedContacts.includes(id))}
+                    />
                 </ListItem>
                 ))}
             </List>
             )}
         </Box>
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Button size="small">Select All</Button>
-            <Button size="small">Clear Selection</Button>
+            <Button size="small" onClick={handleSelectAll}>Select All</Button>
+            <Button size="small" onClick={handleClearSelection}>Clear Selection</Button>
             <Typography variant="body2" color="text.secondary">
             {selectedContacts.length} contacts selected
             </Typography>
@@ -419,7 +418,6 @@ export default function SendWhatsapp() {
   const [contacts, setContacts] = useState([]);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [selectedTemplateName, setSelectedTemplateName] = useState('');
-  const [messageMode, setMessageMode] = useState('manual');
   const [selectedTemplateContent, setSelectedTemplateContent] = useState('');
   const [templateImageUrl, setTemplateImageUrl] = useState('');
   
@@ -468,9 +466,7 @@ export default function SendWhatsapp() {
 
     const promises = selectedContactDetails.map(contact => {
         if (contact && contact.phone) {
-            const payload = messageMode === 'template'
-                ? { to: contact.phone, template: selectedTemplateName, imageUrl: templateImageUrl }
-                : { to: contact.phone, message: message };
+            const payload = { to: contact.phone, template: selectedTemplateName, imageUrl: templateImageUrl };
 
             return fetch(`${API_BASE_URL}/send-whatsapp`, {
                 method: 'POST',
@@ -508,7 +504,7 @@ export default function SendWhatsapp() {
   const getStepContent = (step) => {
     switch (step) {
       case 0:
-        return <MessageComposerStep message={message} setMessage={setMessage} templates={templates} setSelectedTemplateName={setSelectedTemplateName} messageMode={messageMode} setMessageMode={setMessageMode} setSelectedTemplateContent={setSelectedTemplateContent} selectedTemplateContent={selectedTemplateContent} templateImageUrl={templateImageUrl} setTemplateImageUrl={setTemplateImageUrl} />;
+        return <MessageComposerStep message={message} setMessage={setMessage} templates={templates} setSelectedTemplateName={setSelectedTemplateName} setSelectedTemplateContent={setSelectedTemplateContent} selectedTemplateContent={selectedTemplateContent} templateImageUrl={templateImageUrl} setTemplateImageUrl={setTemplateImageUrl} />;
       case 1:
         return <ContactSelectorStep contacts={contacts} selectedContacts={selectedContacts} setSelectedContacts={setSelectedContacts} openContactModal={() => setContactModalOpen(true)} />;
       case 2:

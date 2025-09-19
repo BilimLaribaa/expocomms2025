@@ -59,81 +59,21 @@ import {
   InputLabel,
 } from '@mui/material';
 
-const initialTemplates = [
-    { id: 1, name: 'Welcome Message', content: 'Hi {{name}}, welcome to our service!' },
-    { id: 2, name: 'Promotional Offer', content: 'Hello {{name}}, get 20% off on your next purchase!' },
-    { id: 3, name: 'Event Reminder', content: 'Hi {{name}}, just a reminder about the event tomorrow.' },
-];
+
 
 function ManageTemplatesModal({ open, onClose, templates, setTemplates }) {
-    const [name, setName] = useState('');
-    const [content, setContent] = useState('');
-    const [editingTemplate, setEditingTemplate] = useState(null);
-
-    const handleSave = () => {
-        if (editingTemplate) {
-            setTemplates(templates.map(t => t.id === editingTemplate.id ? { ...t, name, content } : t));
-        } else {
-            setTemplates([...templates, { id: Date.now(), name, content }]);
-        }
-        setName('');
-        setContent('');
-        setEditingTemplate(null);
-    };
-
-    const handleEdit = (template) => {
-        setEditingTemplate(template);
-        setName(template.name);
-        setContent(template.content);
-    };
-
-    const handleDelete = (id) => {
-        setTemplates(templates.filter(t => t.id !== id));
-    };
 
     return (
         <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
-            <DialogTitle>{editingTemplate ? 'Edit Template' : 'Manage Templates'}</DialogTitle>
+            <DialogTitle>Manage Templates</DialogTitle>
             <DialogContent>
-                <Box display="grid" gridTemplateColumns="2fr 1fr" gap={2}>
-                    <List>
-                        {templates.map(template => (
-                            <ListItem key={template.id}>
-                                <ListItemText primary={template.name} secondary={template.content} />
-                                <ListItemSecondaryAction>
-                                    <IconButton edge="end" aria-label="edit" onClick={() => handleEdit(template)}>
-                                        <EditIcon />
-                                    </IconButton>
-                                    <IconButton edge="end" aria-label="delete" onClick={() => handleDelete(template.id)}>
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </ListItemSecondaryAction>
-                            </ListItem>
-                        ))}
-                    </List>
-                    <Box>
-                        <Typography variant="h6">{editingTemplate ? 'Edit Template' : 'Add New Template'}</Typography>
-                        <TextField
-                            label="Template Name"
-                            fullWidth
-                            margin="normal"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                        />
-                        <TextField
-                            label="Template Content"
-                            fullWidth
-                            multiline
-                            rows={4}
-                            margin="normal"
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                        />
-                        <Button onClick={handleSave} variant="contained" sx={{ mt: 2 }}>
-                            {editingTemplate ? 'Save Changes' : 'Add Template'}
-                        </Button>
-                    </Box>
-                </Box>
+                <List>
+                    {templates.map(template => (
+                        <ListItem key={template.id}>
+                            <ListItemText primary={template.name} secondary={template.components.find(c => c.type === 'BODY')?.text || ''} />
+                        </ListItem>
+                    ))}
+                </List>
             </DialogContent>
             <DialogActions>
                 <Button onClick={onClose}>Close</Button>
@@ -142,19 +82,73 @@ function ManageTemplatesModal({ open, onClose, templates, setTemplates }) {
     );
 }
 
+function EmailTemplateSelector({ templates, setSelectedTemplateName, setSelectedTemplateContent, selectedTemplateContent, setMessage }) {
+    const handleTemplateChange = (template) => {
+        setSelectedTemplateName(template.name);
+        const bodyComponent = template.components.find(c => c.type === 'BODY');
+        if (bodyComponent && bodyComponent.text) {
+            setMessage(bodyComponent.text);
+            setSelectedTemplateContent(bodyComponent.text);
+        } else {
+            setMessage(template.name || '');
+            setSelectedTemplateContent(template.name || '');
+        }
+    };
+
+    return (
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, mb: 2 }}>
+            <Paper elevation={3} sx={{ p: 4, borderRadius: 2, flex: 1 }}>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    Select a Template
+                </Typography>
+                <List sx={{ maxHeight: 400, overflow: 'auto', mb: 2 }}>
+                    {templates.map((template) => (
+                        <Card
+                            key={template.id}
+                            sx={{
+                                mb: 2,
+                                cursor: 'pointer',
+                                border: selectedTemplateContent === (template.components.find(c => c.type === 'BODY')?.text || template.name || '') ? '2px solid #1976d2' : '1px solid #ccc',
+                                boxShadow: selectedTemplateContent === (template.components.find(c => c.type === 'BODY')?.text || template.name || '') ? 3 : 1,
+                            }}
+                            onClick={() => handleTemplateChange(template)}
+                        >
+                            <CardContent>
+                                <Typography variant="h6" component="div">
+                                    {template.name}
+                                </Typography>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </List>
+            </Paper>
+            <Paper elevation={3} sx={{ p: 4, borderRadius: 2, flex: 1 }}>
+                <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    Template Preview
+                </Typography>
+                <Box sx={{ border: '1px solid #ccc', p: 2, borderRadius: 1, minHeight: 200, whiteSpace: 'pre-wrap' }}>
+                    <Typography variant="body1">
+                        {selectedTemplateContent || 'please, select the template to display template preview here'}
+                    </Typography>
+                </Box>
+            </Paper>
+        </Box>
+    );
+}
+
 export default function SendEmail() {
   const [emailLogs, setEmailLogs] = useState([]);
   const [scheduledEmails] = useState([]);
-  const [deliveryLogs] = useState([]);
-  const [deliveryStats] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [scheduledLoading, setScheduledLoading] = useState(false);
   const [deliveryLoading, setDeliveryLoading] = useState(false);
   const [statsLoading, setStatsLoading] = useState(false);
   const [contactsLoading, setContactsLoading] = useState(true);
-  const [templates, setTemplates] = useState(initialTemplates);
+  const [templates, setTemplates] = useState([]);
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [selectedTemplateName, setSelectedTemplateName] = useState('');
+  const [selectedTemplateContent, setSelectedTemplateContent] = useState('');
 
   const fetchEmailLogs = async () => {
     try {
@@ -188,6 +182,15 @@ export default function SendEmail() {
       }
     };
 
+    fetch(`${API_BASE_URL}/whatsapp-templates`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.data) {
+        setTemplates(data.data);
+      }
+    })
+    .catch(error => console.error('Error fetching whatsapp templates:', error));
+
     fetchContacts();
     fetchEmailLogs();
   }, []);
@@ -207,18 +210,14 @@ export default function SendEmail() {
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
-  const [previewOpen, setPreviewOpen] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [deliveryTrackingOpen, setDeliveryTrackingOpen] = useState(false);
   const [scheduledTime, setScheduledTime] = useState(dayjs());
   const [contactSearchTerm, setContactSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState(0);
 
   const fileInputRef = useRef(null);
 
-  // Dummy functions for layout purposes
-  const handleOpenDeliveryTracking = () => setDeliveryTrackingOpen(true);
   const handleSendEmail = async () => {
     const selectedEmails = selectedContacts.map(c => c.email);
     const manualEmails = emails.split(',').map(e => e.trim()).filter(e => e);
@@ -262,10 +261,8 @@ export default function SendEmail() {
   };
   const handleAttachmentChange = () => {};
   const removeAttachment = () => {};
-  const saveDraft = () => {};
-  const loadDraft = () => {};
   const cancelScheduledEmail = () => {};
-  const loadDeliveryLogs = () => {};
+  
 
   const filteredContacts = contacts.filter(contact =>
     contact.full_name.toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
@@ -281,6 +278,14 @@ export default function SendEmail() {
         return [...prev, contact];
       }
     });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedContacts(filteredContacts);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedContacts([]);
   };
 
   const getStatusColor = (status) => {
@@ -316,34 +321,40 @@ export default function SendEmail() {
     }
   };
 
-  const pieChartOptions = {
-    chart: {
-      type: 'pie',
-    },
-    labels: deliveryStats.map(stat => getStatusLabel(stat.status)),
-    colors: deliveryStats.map(stat => getStatusHexColor(stat.status)),
-    legend: {
-      position: 'bottom',
-    },
-    responsive: [{
-      breakpoint: 480,
-      options: {
-        chart: {
-          width: 200
-        },
-        legend: {
-          position: 'bottom'
-        }
+  const [deleteConfirmation, setDeleteConfirmation] = useState({ open: false, logId: null });
+
+  const handleDeleteEmailLog = async () => {
+    if (!deleteConfirmation.logId) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/email/logs/${deleteConfirmation.logId}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        setSnackbar({ open: true, message: 'Email log deleted successfully!', severity: 'success' });
+        fetchEmailLogs(); // Refresh the logs
+      } else {
+        const errorText = await response.text();
+        setSnackbar({ open: true, message: `Failed to delete email log: ${errorText}`, severity: 'error' });
       }
-    }]
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Error deleting email log.', severity: 'error' });
+    } finally {
+      setDeleteConfirmation({ open: false, logId: null });
+    }
   };
 
-  const pieChartSeries = deliveryStats.map(stat => stat.count);
-
+  
   const handleTemplateChange = (event) => {
     const selectedTemplate = templates.find(t => t.id === event.target.value);
     if (selectedTemplate) {
-        setMessage(selectedTemplate.content);
+        const bodyComponent = selectedTemplate.components.find(c => c.type === 'BODY');
+        if (bodyComponent && bodyComponent.text) {
+            setMessage(bodyComponent.text);
+        } else {
+            setMessage(selectedTemplate.name || '');
+        }
     }
   };
 
@@ -513,23 +524,25 @@ export default function SendEmail() {
         </Box>
 
         {/* Footer with selected count */}
-        {selectedContacts.length > 0 && (
-          <Box sx={{
-            p: 2,
-            borderTop: 1,
-            borderColor: 'divider',
-            bgcolor: 'background.paper',
-            boxShadow: '0 -1px 3px rgba(0,0,0,0.1)'
-          }}>
-            <Typography variant="body2" sx={{
-              textAlign: 'center',
-              fontWeight: 500,
-              color: 'primary.main'
-            }}>
-              {selectedContacts.length} contact{selectedContacts.length !== 1 ? 's' : ''} selected
-            </Typography>
+        <Box sx={{
+          p: 2,
+          borderTop: 1,
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+          boxShadow: '0 -1px 3px rgba(0,0,0,0.1)'
+        }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Button size="small" onClick={handleSelectAll}>Select All</Button>
+            <Button size="small" onClick={handleClearSelection}>Clear Selection</Button>
           </Box>
-        )}
+          <Typography variant="body2" sx={{
+            textAlign: 'center',
+            fontWeight: 500,
+            color: 'primary.main'
+          }}>
+            {selectedContacts.length} contact{selectedContacts.length !== 1 ? 's' : ''} selected
+          </Typography>
+        </Box>
       </Box>
 
       {/* Email Content Area */}
@@ -541,13 +554,7 @@ export default function SendEmail() {
               Email
             </Typography>
             <Box display="flex" gap={2}>
-              <Button
-                variant="outlined"
-                startIcon={<AnalyticsIcon />}
-                onClick={handleOpenDeliveryTracking}
-              >
-                Delivery Tracking
-              </Button>
+              
               <Button
                 variant="contained"
                 startIcon={<SendIcon />}
@@ -593,6 +600,13 @@ export default function SendEmail() {
 
           {activeTab === 0 && (
             <>
+              <EmailTemplateSelector
+                templates={templates}
+                setSelectedTemplateName={setSelectedTemplateName}
+                setSelectedTemplateContent={setSelectedTemplateContent}
+                selectedTemplateContent={selectedTemplateContent}
+                setMessage={setMessage}
+              />
               <Typography variant="h6" gutterBottom>
                 Sent Emails History
               </Typography>
@@ -623,16 +637,13 @@ export default function SendEmail() {
                           <TableCell><div dangerouslySetInnerHTML={{ __html: log.message }} /></TableCell>
                           <TableCell>{new Date(log.sent_at).toLocaleString()}</TableCell>
                           <TableCell>
-                            <Button
+                           
+                            <IconButton
                               size="small"
-                              variant="outlined"
-                              onClick={() => {
-                                setDeliveryTrackingOpen(true);
-                                loadDeliveryLogs(log.id);
-                              }}
+                              onClick={() => setDeleteConfirmation({ open: true, logId: log.id })}
                             >
-                              View Status
-                            </Button>
+                              <DeleteIcon />
+                            </IconButton>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -745,11 +756,7 @@ export default function SendEmail() {
                         ))}
                     </Select>
                 </FormControl>
-                <Tooltip title="Manage Templates">
-                    <Button variant="outlined" startIcon={<AddIcon />} onClick={() => setTemplateModalOpen(true)}>
-                        Manage
-                    </Button>
-                </Tooltip>
+                
             </Box>
 
             {/* Rich editor */}
@@ -809,9 +816,7 @@ export default function SendEmail() {
                 Schedule
               </Button>
 
-              <Button onClick={saveDraft}>Save Draft</Button>
-              <Button onClick={loadDraft}>Load Draft</Button>
-              <Button onClick={() => setPreviewOpen(true)}>Preview</Button>
+             
             </Box>
           </Box>
         </Box>
@@ -878,137 +883,12 @@ export default function SendEmail() {
       </Snackbar>
 
       {/* Delivery Tracking Modal */}
-      <Modal open={deliveryTrackingOpen} onClose={() => setDeliveryTrackingOpen(false)}>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '5%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '90%',
-            maxWidth: 1200,
-            bgcolor: 'background.paper',
-            p: 3,
-            boxShadow: 24,
-            overflowY: 'auto',
-            maxHeight: '90%',
-            borderRadius: 2,
-          }}
-        >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-              Email Delivery Status & Analytics
-            </Typography>
-            <IconButton onClick={() => setDeliveryTrackingOpen(false)}>
-              <CloseIcon />
-            </IconButton>
-          </Stack>
-
-          {/* Delivery Statistics Pie Chart */}
-          <Card sx={{ mb: 3 }}>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Delivery Statistics
-              </Typography>
-              {statsLoading ? (
-                <Box display="flex" justifyContent="center" alignItems="center" p={4}>
-                  <CircularProgress />
-                </Box>
-              ) : deliveryStats.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                  No delivery data available
-                </Typography>
-              ) : (
-                <Box sx={{ height: 300 }}>
-                  {/* Placeholder for ReactApexChart */}
-                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                    (Pie Chart Placeholder)
-                  </Typography>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Delivery Logs Table */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Delivery Logs
-              </Typography>
-              {deliveryLoading ? (
-                <Box display="flex" justifyContent="center" alignItems="center" p={4}>
-                  <CircularProgress />
-                </Box>
-              ) : deliveryLogs.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-                  Click &quot;View Status&quot; on any sent email to see delivery logs
-                </Typography>
-              ) : (
-                <TableContainer component={Paper}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Recipient</TableCell>
-                        <TableCell>Status</TableCell>
-                        <TableCell>Sent At</TableCell>
-                        <TableCell>Delivered At</TableCell>
-                        <TableCell>Failed At</TableCell>
-                        <TableCell>Error Message</TableCell>
-                        <TableCell>Retry Count</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {/* Dummy data for delivery logs */}
-                      <TableRow>
-                        <TableCell>recipient@example.com</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={getStatusLabel('sent')}
-                            color={getStatusColor('sent')}
-                            size="small"
-                          />
-                        </TableCell>
-                        <TableCell>{new Date().toLocaleString()}</TableCell>
-                        <TableCell>-</TableCell>
-                        <TableCell>-</TableCell>
-                        <TableCell>-</TableCell>
-                        <TableCell>0</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
-            </CardContent>
-          </Card>
-        </Box>
-      </Modal>
+    
+        
+     
 
       {/* Preview modal */}
-      <Modal open={previewOpen} onClose={() => setPreviewOpen(false)}>
-        <Box
-          sx={{
-            position: 'absolute',
-            top: '10%',
-            left: '10%',
-            width: '80%',
-            height: '80%',
-            bgcolor: 'background.paper',
-            p: 4,
-            overflowY: 'auto',
-          }}
-        >
-          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h6">Preview</Typography>
-            <IconButton onClick={() => setPreviewOpen(false)}>
-              <CloseIcon />
-            </IconButton>
-          </Stack>
-
-          <Typography variant="subtitle1">To: {emails}</Typography>
-          <Typography variant="subtitle1">Subject: {subject}</Typography>
-          <div dangerouslySetInnerHTML={{ __html: message }} />
-        </Box>
-      </Modal>
+      
 
       <ManageTemplatesModal
         open={templateModalOpen}
@@ -1016,6 +896,21 @@ export default function SendEmail() {
         templates={templates}
         setTemplates={setTemplates}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteConfirmation.open}
+        onClose={() => setDeleteConfirmation({ open: false, logId: null })}
+      >
+        <DialogTitle>Delete Email Log</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to delete this email log? This action cannot be undone.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteConfirmation({ open: false, logId: null })}>Cancel</Button>
+          <Button onClick={handleDeleteEmailLog} color="error">Delete</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
