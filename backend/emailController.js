@@ -23,12 +23,21 @@ module.exports = function(db) {
       return res.status(400).send('No recipients defined');
     }
 
+    const userAttachments = req.files ? req.files.map(file => ({ filename: file.originalname, path: file.path })) : [];
+
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: `"Minds in Motion Foundation" <${process.env.EMAIL_USER}>`,
       to,
       subject,
-      html,
-      attachments: req.files ? req.files.map(file => ({ filename: file.originalname, path: file.path })) : [],
+      html: html + '<br><img src="cid:mim-logo"/>',
+      attachments: [
+        ...userAttachments,
+        {
+          filename: 'MIM_logo.jpeg',
+          path: 'd:/Projects/expocomms2025/images/MIM_logo.jpeg',
+          cid: 'mim-logo'
+        }
+      ],
     };
 
     transporter.sendMail(mailOptions, (error, info) => {

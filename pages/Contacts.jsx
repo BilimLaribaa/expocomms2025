@@ -22,6 +22,7 @@ import MuiAlert from "@mui/material/Alert";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import * as XLSX from 'xlsx'; 
 import API_BASE_URL from '../config.js';
+import DuplicateContactsModal from '../components/DuplicateContactsModal';
 
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
@@ -89,6 +90,12 @@ export default function Contacts() {
   //Form Modal
   const [open, setOpen] = React.useState(false);
   const [editingContactId, setEditingContactId] = React.useState(null); 
+
+  // Duplicates Modal
+  const [duplicatesModalOpen, setDuplicatesModalOpen] = React.useState(false);
+  const [duplicateContacts, setDuplicateContacts] = React.useState([]);
+  const [nonDuplicateContacts, setNonDuplicateContacts] = React.useState([]);
+   
 
   const handleOpen = (contact = null) => {
     if (contact) {
@@ -273,6 +280,10 @@ export default function Contacts() {
         fetchContacts(); 
         setFormData({}); 
         setEditingContactId(null); 
+      } else if (response.status === 409) {
+        const errorData = await response.json();
+        setDuplicateContacts(errorData.duplicates);
+        setDuplicatesModalOpen(true);
       } else {
         const errorData = await response.json();
         console.error(`Failed to ${editingContactId ? 'update' : 'create'} contact:`, errorData.error);
@@ -354,6 +365,11 @@ export default function Contacts() {
             setSnackbarMessage(`${importedContacts.length} contacts imported successfully!`);
             setSnackbarOpen(true);
             fetchContacts(); // Refresh the contact list
+          } else if (response.status === 409) {
+            const errorData = await response.json();
+            setDuplicateContacts(errorData.duplicates);
+            setNonDuplicateContacts(errorData.nonDuplicates);
+            setDuplicatesModalOpen(true);
           } else {
             console.error('Failed to import contacts:', response.statusText);
             setSnackbarMessage("Failed to import contacts.");
@@ -440,6 +456,61 @@ export default function Contacts() {
   const handleAccordionChange = (panel) => (event, isExpanded) => {
     setExpandedAccordion(isExpanded ? panel : false);
   };
+
+  const handleSkip = async (contacts) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/contacts/bulk-import/skip`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contacts),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setSnackbarMessage(result.message);
+        setSnackbarOpen(true);
+        fetchContacts();
+      } else {
+        const errorData = await response.json();
+        setSnackbarMessage(errorData.error);
+        setSnackbarOpen(true);
+      }
+    } catch (error) {
+      setSnackbarMessage('Error skipping contacts.');
+      setSnackbarOpen(true);
+    }
+    setDuplicatesModalOpen(false);
+  };
+
+  const handleAdd = async (contacts) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/contacts/bulk-import/add`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contacts),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setSnackbarMessage(result.message);
+        setSnackbarOpen(true);
+        fetchContacts();
+      } else {
+        const errorData = await response.json();
+        setSnackbarMessage(errorData.error);
+        setSnackbarOpen(true);
+      }
+    } catch (error) {
+      setSnackbarMessage('Error adding contacts.');
+      setSnackbarOpen(true);
+    }
+    setDuplicatesModalOpen(false);
+  };
+
 
   const getFieldStyle = (fieldName) => {
     switch (fieldName) {
@@ -751,6 +822,15 @@ export default function Contacts() {
             </Button>
           </DialogActions>
         </Dialog>
+
+        <DuplicateContactsModal
+          open={duplicatesModalOpen}
+          onClose={() => setDuplicatesModalOpen(false)}
+          duplicates={duplicateContacts}
+          nonDuplicates={nonDuplicateContacts}
+          onSkip={handleSkip}
+          onAdd={handleAdd}
+        />
     </Box>
   );
 }

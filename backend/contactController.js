@@ -5,7 +5,7 @@ const { contactSchema } = require('./validation');
 module.exports = (db) => {
     
     router.get('/', (req, res) => {
-        db.all("SELECT * FROM contacts", [], (err, rows) => {
+        db.all("SELECT * FROM contacts ORDER BY id DESC", [], (err, rows) => {
             if (err) {
                 res.status(400).json({ "error": err.message });
                 return;
@@ -23,17 +23,35 @@ module.exports = (db) => {
         }
 
         const { name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active } = req.body;
-        const stmt = db.prepare(`INSERT INTO contacts (
-            name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-        stmt.run(name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite ? 1 : 0, is_active ? 1 : 0, function (err) {
+
+        // Check for duplicate email, phone, or whatsapp
+        db.all("SELECT * FROM contacts WHERE email = ? OR phone = ? OR whatsapp = ?", [email, phone, whatsapp], (err, rows) => {
             if (err) {
-                res.status(400).json({ "error": err.message });
-                return;
+                return res.status(400).json({ "error": err.message });
             }
-            res.status(201).json({ id: this.lastID, ...req.body });
+            if (rows && rows.length > 0) {
+                const duplicates = rows.map(row => {
+                    const duplicateField = {};
+                    if (row.email === email) duplicateField.email = email;
+                    if (row.phone === phone) duplicateField.phone = phone;
+                    if (row.whatsapp === whatsapp) duplicateField.whatsapp = whatsapp;
+                    return { ...row, duplicateField };
+                });
+                return res.status(409).json({ message: "Duplicate contacts found.", duplicates });
+            }
+
+            const stmt = db.prepare(`INSERT INTO contacts (
+                name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+            stmt.run(name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite ? 1 : 0, is_active ? 1 : 0, function (err) {
+                if (err) {
+                    res.status(400).json({ "error": err.message });
+                    return;
+                }
+                res.status(201).json({ id: this.lastID, ...req.body });
+            });
+            stmt.finalize();
         });
-        stmt.finalize();
     });
 
     
@@ -100,7 +118,63 @@ module.exports = (db) => {
         });
     });
 
-    router.post('/bulk-import', (req, res) => {
+    router.post('/bulk-import', async (req, res) => {
+        const contacts = req.body;
+        if (!Array.isArray(contacts)) {
+            return res.status(400).json({ "error": "Request body must be an array of contacts." });
+        }
+
+        const duplicates = [];
+        const nonDuplicates = [];
+
+        for (const contact of contacts) {
+            const { error } = contactSchema.validate(contact);
+            if (error) {
+                return res.status(400).json({ "error": error.details[0].message });
+            }
+
+            const { email, phone, whatsapp } = contact;
+            const row = await new Promise((resolve, reject) => {
+                db.get("SELECT * FROM contacts WHERE email = ? OR phone = ? OR whatsapp = ?", [email, phone, whatsapp], (err, row) => {
+                    if (err) reject(err);
+                    resolve(row);
+                });
+            });
+
+            if (row) {
+                const duplicateField = {};
+                if (row.email === email) duplicateField.email = email;
+                if (row.phone === phone) duplicateField.phone = phone;
+                if (row.whatsapp === whatsapp) duplicateField.whatsapp = whatsapp;
+                duplicates.push({ ...contact, duplicateField });
+            } else {
+                nonDuplicates.push(contact);
+            }
+        }
+
+        if (duplicates.length > 0) {
+            return res.status(409).json({ duplicates, nonDuplicates });
+        } else {
+            // No duplicates, proceed with bulk insert
+            const stmt = db.prepare(`INSERT INTO contacts (
+                name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+
+            db.serialize(() => {
+                db.run("BEGIN TRANSACTION");
+                for (const contact of nonDuplicates) {
+                    const { name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active } = contact;
+                    stmt.run(name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite ? 1 : 0, is_active ? 1 : 0);
+                }
+                db.run("COMMIT");
+            });
+
+            stmt.finalize();
+            res.status(201).json({ message: `${nonDuplicates.length} contacts imported successfully.` });
+        }
+    });
+
+    router.post('/bulk-import/skip', (req, res) => {
         const contacts = req.body;
         if (!Array.isArray(contacts)) {
             return res.status(400).json({ "error": "Request body must be an array of contacts." });
@@ -111,47 +185,39 @@ module.exports = (db) => {
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 
         db.serialize(() => {
-            let transactionActive = false;
-            try {
-                db.run("BEGIN TRANSACTION");
-                transactionActive = true;
-
-                for (const contact of contacts) {
-                    const { error } = contactSchema.validate(contact);
-                    if (error) {
-                        throw new Error(error.details[0].message); // Throw to catch and rollback
-                    }
-                    const { name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active } = contact;
-                    stmt.run(name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite ? 1 : 0, is_active ? 1 : 0);
-                }
-
-                db.run("COMMIT", (err) => {
-                    if (err) {
-                        if (transactionActive) { 
-                            db.run("ROLLBACK");
-                        }
-                        res.status(500).json({ "error": err.message });
-                    } else {
-                        res.status(201).json({ message: `${contacts.length} contacts imported successfully.` });
-                    }
-                });
-
-            } catch (e) {
-                if (transactionActive) { 
-                    db.run("ROLLBACK", (rollbackErr) => {
-                        if (rollbackErr) {
-                            console.error("Error during rollback:", rollbackErr.message);
-                        }
-                        console.error("Bulk import error:", e.message); // Add this line
-                        res.status(400).json({ "error": e.message });
-                    });
-                } else {
-                    res.status(400).json({ "error": e.message });
-                }
-            } finally {
-                stmt.finalize();
+            db.run("BEGIN TRANSACTION");
+            for (const contact of contacts) {
+                const { name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active } = contact;
+                stmt.run(name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite ? 1 : 0, is_active ? 1 : 0);
             }
+            db.run("COMMIT");
         });
+
+        stmt.finalize();
+        res.status(201).json({ message: `${contacts.length} contacts imported successfully.` });
+    });
+
+    router.post('/bulk-import/add', (req, res) => {
+        const contacts = req.body;
+        if (!Array.isArray(contacts)) {
+            return res.status(400).json({ "error": "Request body must be an array of contacts." });
+        }
+
+        const stmt = db.prepare(`INSERT INTO contacts (
+            name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+
+        db.serialize(() => {
+            db.run("BEGIN TRANSACTION");
+            for (const contact of contacts) {
+                const { name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active } = contact;
+                stmt.run(name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite ? 1 : 0, is_active ? 1 : 0);
+            }
+            db.run("COMMIT");
+        });
+
+        stmt.finalize();
+        res.status(201).json({ message: `${contacts.length} contacts imported successfully.` });
     });
 
     return router;

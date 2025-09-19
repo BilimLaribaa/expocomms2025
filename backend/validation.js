@@ -13,6 +13,7 @@ const contactSchema = Joi.object({
 
   phone: Joi.string()
     .pattern(relaxedPhonePattern)
+    .allow('')
     .required()
     .messages({
       'string.pattern.base': 'Mobile number must be max 15 characters, digits, space or + only.',
@@ -21,6 +22,7 @@ const contactSchema = Joi.object({
 
   whatsapp: Joi.string()
     .pattern(relaxedPhonePattern)
+    .allow('')
     .required()
     .messages({
       'string.pattern.base': 'WhatsApp number must be max 15 characters, digits, space or + only.',

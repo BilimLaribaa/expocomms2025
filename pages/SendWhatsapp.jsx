@@ -227,7 +227,7 @@ function ContactSelectorStep({ contacts, selectedContacts, setSelectedContacts, 
 
   const contactGroups = useMemo(() => {
     const groups = contacts.reduce((acc, contact) => {
-      const groupName = contact.contact_type || 'Uncategorized';
+      const groupName = contact.contact_type || 'All';
       if (!acc[groupName]) {
         acc[groupName] = [];
       }
