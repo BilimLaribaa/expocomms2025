@@ -158,6 +158,7 @@ export default function SendEmail() {
       const response = await fetch(`${API_BASE_URL}/email/logs`);
       if (response.ok) {
         const data = await response.json();
+        data.sort((a, b) => new Date(b.sent_at) - new Date(a.sent_at));
         setEmailLogs(data);
       } else {
         console.error('Failed to fetch email logs:', response.statusText);
@@ -206,10 +207,22 @@ export default function SendEmail() {
 
   React.useEffect(() => {
     const selectedEmails = selectedContacts.map(c => c.email);
-    const manualEmails = emails.split(',').map(e => e.trim()).filter(e => e);
+
+    // Get all emails that were in the input field
+    const currentEmails = emails.split(',').map(e => e.trim()).filter(Boolean);
+
+    // Get all emails from the master contacts list
+    const allContactEmails = new Set(contacts.map(c => c.email));
+
+    // Find emails that were manually added (i.e., not in the master contact list)
+    const manualEmails = currentEmails.filter(e => !allContactEmails.has(e));
+
+    // The new list of emails is the unique combination of manually added ones and the currently selected ones
     const allEmails = [...new Set([...manualEmails, ...selectedEmails])];
+
     setEmails(allEmails.join(', '));
-  }, [selectedContacts]);
+
+  }, [selectedContacts, contacts]);
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
 
@@ -277,7 +290,7 @@ export default function SendEmail() {
   
   const contactGroups = useMemo(() => {
     const groups = contacts.reduce((acc, contact) => {
-      const groupName = contact.contact_type || 'Uncategorized';
+      const groupName = contact.contact_type || 'All';
       if (!acc[groupName]) {
         acc[groupName] = [];
       }
