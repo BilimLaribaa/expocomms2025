@@ -2,7 +2,7 @@ import 'quill/dist/quill.snow.css';
 
 import ReactQuill from 'react-quill';
 import dayjs from 'dayjs';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 
 import SendIcon from '@mui/icons-material/Send';
 import CloseIcon from '@mui/icons-material/Close';
@@ -60,6 +60,8 @@ import {
 } from '@mui/material';
 
 
+
+import { Person as PersonIcon, Group as GroupIcon } from '@mui/icons-material';
 
 function ManageTemplatesModal({ open, onClose, templates, setTemplates }) {
 
@@ -149,6 +151,7 @@ export default function SendEmail() {
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [selectedTemplateName, setSelectedTemplateName] = useState('');
   const [selectedTemplateContent, setSelectedTemplateContent] = useState('');
+  const [selectedTab, setSelectedTab] = useState(0);
 
   const fetchEmailLogs = async () => {
     try {
@@ -198,7 +201,7 @@ export default function SendEmail() {
   const [emails, setEmails] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
-  const [attachments] = useState([]);
+  const [attachments, setAttachments] = useState([]);
   const [selectedContacts, setSelectedContacts] = useState([]);
 
   React.useEffect(() => {
@@ -229,17 +232,19 @@ export default function SendEmail() {
     }
 
     setLoading(true);
+
+    const formData = new FormData();
+    formData.append('to', allEmails.join(', '));
+    formData.append('subject', subject);
+    formData.append('html', message);
+    attachments.forEach(file => {
+      formData.append('attachments', file);
+    });
+
     try {
       const response = await fetch(`${API_BASE_URL}/email/send`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: allEmails.join(', '),
-          subject,
-          html: message,
-        }),
+        body: formData,
       });
       if (response.ok) {
         setSnackbar({ open: true, message: 'Email sent successfully!', severity: 'success' });
@@ -248,6 +253,7 @@ export default function SendEmail() {
         setMessage('');
         setSelectedContacts([]);
         setEmails('');
+        setAttachments([]);
         fetchEmailLogs();
       } else {
         const errorText = await response.text();
@@ -259,10 +265,30 @@ export default function SendEmail() {
       setLoading(false);
     }
   };
-  const handleAttachmentChange = () => {};
-  const removeAttachment = () => {};
+  const handleAttachmentChange = (e) => {
+    setAttachments([...attachments, ...e.target.files]);
+  };
+  const removeAttachment = (index) => {
+    const newAttachments = [...attachments];
+    newAttachments.splice(index, 1);
+    setAttachments(newAttachments);
+  };
   const cancelScheduledEmail = () => {};
   
+  const contactGroups = useMemo(() => {
+    const groups = contacts.reduce((acc, contact) => {
+      const groupName = contact.contact_type || 'Uncategorized';
+      if (!acc[groupName]) {
+        acc[groupName] = [];
+      }
+      acc[groupName].push(contact.id);
+      return acc;
+    }, {});
+    return Object.keys(groups).map(groupName => ({
+      name: groupName,
+      contactIds: groups[groupName],
+    }));
+  }, [contacts]);
 
   const filteredContacts = contacts.filter(contact =>
     contact.full_name.toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
@@ -280,46 +306,49 @@ export default function SendEmail() {
     });
   };
 
+  const handleGroupToggle = (contactIds) => () => {
+    const newSelected = [...selectedContacts];
+    const allContactsInGroupSelected = contactIds.every(id => newSelected.some(c => c.id === id));
+
+    if (allContactsInGroupSelected) {
+      // Deselect all contacts in the group
+      contactIds.forEach(id => {
+        const index = newSelected.findIndex(c => c.id === id);
+        if (index > -1) {
+          newSelected.splice(index, 1);
+        }
+      });
+    } else {
+      // Select all contacts in the group
+      contactIds.forEach(id => {
+        if (!newSelected.some(c => c.id === id)) {
+          const contact = contacts.find(c => c.id === id);
+          if (contact) {
+            newSelected.push(contact);
+          }
+        }
+      });
+    }
+    setSelectedContacts(newSelected);
+  };
+
   const handleSelectAll = () => {
-    setSelectedContacts(filteredContacts);
+    if (selectedTab === 0) {
+      setSelectedContacts(filteredContacts);
+    } else {
+      const allContactIds = contactGroups.flatMap(g => g.contactIds);
+      const allContacts = allContactIds.map(id => contacts.find(c => c.id === id)).filter(Boolean);
+      setSelectedContacts([...new Set([...selectedContacts, ...allContacts])]);
+    }
   };
 
   const handleClearSelection = () => {
     setSelectedContacts([]);
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'delivered': return 'success';
-      case 'sent': return 'primary';
-      case 'pending': return 'warning';
-      case 'failed': return 'error';
-      case 'bounced': return 'error';
-      default: return 'default';
-    }
-  };
+ 
 
-  const getStatusHexColor = (status) => {
-    switch (status) {
-      case 'delivered': return '#4CAF50';
-      case 'sent': return '#2196F3';
-      case 'pending': return '#9E9E9E';
-      case 'failed': return '#F44336';
-      case 'bounced': return '#FF9800';
-      default: return '#BDBDBD';
-    }
-  };
-
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case 'delivered': return 'Delivered';
-      case 'sent': return 'Sent';
-      case 'pending': return 'Pending';
-      case 'failed': return 'Failed';
-      case 'bounced': return 'Bounced';
-      default: return status;
-    }
-  };
+  
 
   const [deleteConfirmation, setDeleteConfirmation] = useState({ open: false, logId: null });
 
@@ -420,17 +449,21 @@ export default function SendEmail() {
           overflowY: 'auto',
           bgcolor: 'grey.50'
         }}>
+          <Tabs value={selectedTab} onChange={(e, newValue) => setSelectedTab(newValue)} variant="fullWidth">
+            <Tab icon={<PersonIcon />} label="Contacts" />
+            <Tab icon={<GroupIcon />} label="Groups" />
+          </Tabs>
           {contactsLoading ? (
             <Box display="flex" justifyContent="center" alignItems="center" p={4}>
               <CircularProgress size={32} />
             </Box>
-          ) : filteredContacts.length === 0 ? (
+          ) : selectedTab === 0 && filteredContacts.length === 0 ? (
             <Box display="flex" flexDirection="column" alignItems="center" p={4}>
               <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center' }}>
                 {contactSearchTerm ? 'No contacts found' : 'No contacts available'}
               </Typography>
             </Box>
-          ) : (
+          ) : selectedTab === 0 ? (
             <List sx={{ p: 0 }}>
               {filteredContacts.map((contact) => {
                 const isSelected = selectedContacts.find(c => c.id === contact.id);
@@ -519,6 +552,19 @@ export default function SendEmail() {
                   </ListItem>
                 );
               })}
+            </List>
+          ) : (
+            <List dense>
+              {contactGroups.map((group) => (
+                <ListItem key={group.name} button onClick={handleGroupToggle(group.contactIds)}>
+                  <ListItemText primary={group.name} />
+                  <Checkbox
+                    edge="end"
+                    checked={group.contactIds.every(id => selectedContacts.some(c => c.id === id))}
+                    indeterminate={!group.contactIds.every(id => selectedContacts.some(c => c.id === id)) && group.contactIds.some(id => selectedContacts.some(c => c.id === id))}
+                  />
+                </ListItem>
+              ))}
             </List>
           )}
         </Box>

@@ -3,6 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
+const multer = require('multer');
 
 const app = express();
 const port = 3001;
@@ -63,6 +64,8 @@ const db = new sqlite3.Database('./contacts.db', (err) => {
 });
 
 
+const upload = multer({ dest: 'uploads/' });
+
 app.use(cors());
 app.use(bodyParser.json());
 
@@ -74,7 +77,7 @@ whatsappRouter.post('/send-whatsapp', whatsappController.sendWhatsappMessage);
 whatsappRouter.get('/whatsapp-templates', whatsappController.getWhatsappTemplates);
 
 app.use('/api/contacts', contactController);
-app.use('/api/email', emailController);
+app.use('/api/email', upload.array('attachments'), emailController);
 app.use('/api', whatsappRouter);
 
 app.listen(port, () => {

@@ -28,6 +28,7 @@ module.exports = function(db) {
       to,
       subject,
       html,
+      attachments: req.files ? req.files.map(file => ({ filename: file.originalname, path: file.path })) : [],
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
