@@ -36,11 +36,26 @@ export default function DuplicateContactsModal({ open, onClose, duplicates, nonD
             </TableHead>
             <TableBody>
               {duplicates.map((contact, index) => (
-                <TableRow key={index}>
-                  <TableCell>{contact.full_name}</TableCell>
-                  <TableCell>{contact.duplicateField.email || 'N/A'}</TableCell>
-                  <TableCell>{contact.duplicateField.phone || 'N/A'}</TableCell>
-                  <TableCell>{contact.duplicateField.whatsapp || 'N/A'}</TableCell>
+                <TableRow key={index} >
+                  <TableCell >{contact.full_name}</TableCell>
+                  <TableCell sx={{
+          backgroundColor: (theme) =>
+            contact.duplicateField.email
+              ? theme.palette.error.light
+              : theme.palette.success.light,
+        }}>{contact.duplicateField.email || 'N/A'}</TableCell>
+                  <TableCell sx={{
+          backgroundColor: (theme) =>
+            contact.duplicateField.email
+              ? theme.palette.error.light
+              : theme.palette.success.light,
+        }}>{contact.duplicateField.phone || 'N/A'}</TableCell>
+                  <TableCell sx={{
+          backgroundColor: (theme) =>
+            contact.duplicateField.email
+              ? theme.palette.error.light
+              : theme.palette.success.light,
+        }}>{contact.duplicateField.whatsapp || 'N/A'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
