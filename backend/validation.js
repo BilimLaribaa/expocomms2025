@@ -7,14 +7,14 @@ const contactSchema = Joi.object({
   id: Joi.number().integer(),
   name_title: Joi.string(),
 
-  full_name: Joi.string().required().messages({
+  full_name: Joi.string().allow('').messages({
     'string.empty': 'Full name is required',
   }),
 
   phone: Joi.string()
     .pattern(relaxedPhonePattern)
     .allow('')
-    .required()
+    
     .messages({
       'string.pattern.base': 'Mobile number must be max 15 characters, digits, space or + only.',
       'string.empty': 'Mobile number is required',
@@ -23,12 +23,12 @@ const contactSchema = Joi.object({
   whatsapp: Joi.string()
     .pattern(relaxedPhonePattern)
     .allow('')
-    .required()
+    
     .messages({
       'string.pattern.base': 'WhatsApp number must be max 15 characters, digits, space or + only.',
     }),
 
-  email: Joi.string().email().required(),
+  email: Joi.string().email(),
   alternate_email: Joi.string().email().allow(''),
 
   address: Joi.string().allow(''),

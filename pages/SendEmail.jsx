@@ -140,7 +140,7 @@ function EmailTemplateSelector({ templates, setSelectedTemplateName, setSelected
 
 export default function SendEmail() {
   const [emailLogs, setEmailLogs] = useState([]);
-  const [scheduledEmails] = useState([]);
+  const [scheduledEmails, setScheduledEmails] = useState([]);
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [scheduledLoading, setScheduledLoading] = useState(false);
@@ -168,14 +168,29 @@ export default function SendEmail() {
     }
   };
 
+  const fetchScheduledEmails = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/email/scheduled`);
+      if (response.ok) {
+        const data = await response.json();
+        data.sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at));
+        setScheduledEmails(data);
+      } else {
+        console.error('Failed to fetch scheduled emails:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error fetching scheduled emails:', error);
+    }
+  };
+
   React.useEffect(() => {
     const fetchContacts = async () => {
       setContactsLoading(true);
       try {
-        const response = await fetch(`${API_BASE_URL}/contacts`);
+        const response = await fetch(`${API_BASE_URL}/contacts?pageSize=10000`);
         if (response.ok) {
           const data = await response.json();
-          setContacts(data);
+          setContacts(data.data);
         } else {
           console.error('Failed to fetch contacts:', response.statusText);
         }
@@ -197,6 +212,7 @@ export default function SendEmail() {
 
     fetchContacts();
     fetchEmailLogs();
+    fetchScheduledEmails();
   }, []);
 
   const [emails, setEmails] = useState('');
@@ -234,7 +250,7 @@ export default function SendEmail() {
 
   const fileInputRef = useRef(null);
 
-  const handleSendEmail = async () => {
+  const handleSendEmail = async (isScheduled = false) => {
     const selectedEmails = selectedContacts.map(c => c.email);
     const manualEmails = emails.split(',').map(e => e.trim()).filter(e => e);
     const allEmails = [...new Set([...manualEmails, ...selectedEmails])];
@@ -254,26 +270,34 @@ export default function SendEmail() {
       formData.append('attachments', file);
     });
 
+    if (isScheduled) {
+      formData.append('scheduled_at', scheduledTime.toISOString());
+    }
+
     try {
       const response = await fetch(`${API_BASE_URL}/email/send`, {
         method: 'POST',
         body: formData,
       });
       if (response.ok) {
-        setSnackbar({ open: true, message: 'Email sent successfully!', severity: 'success' });
+        setSnackbar({ open: true, message: `Email ${isScheduled ? 'scheduled' : 'sent'} successfully!`, severity: 'success' });
         setComposerOpen(false);
         setSubject('');
         setMessage('');
         setSelectedContacts([]);
         setEmails('');
         setAttachments([]);
-        fetchEmailLogs();
+        if (isScheduled) {
+          fetchScheduledEmails();
+        } else {
+          fetchEmailLogs();
+        }
       } else {
         const errorText = await response.text();
-        setSnackbar({ open: true, message: `Failed to send email: ${errorText}`, severity: 'error' });
+        setSnackbar({ open: true, message: `Failed to ${isScheduled ? 'schedule' : 'send'} email: ${errorText}`, severity: 'error' });
       }
     } catch (error) {
-      setSnackbar({ open: true, message: 'Error sending email.', severity: 'error' });
+      setSnackbar({ open: true, message: `Error ${isScheduled ? 'scheduling' : 'sending'} email.`, severity: 'error' });
     } finally {
       setLoading(false);
     }
@@ -286,7 +310,22 @@ export default function SendEmail() {
     newAttachments.splice(index, 1);
     setAttachments(newAttachments);
   };
-  const cancelScheduledEmail = () => {};
+  const cancelScheduledEmail = async (id) => {
+    try {
+      const response = await fetch(API_BASE_URL + '/email/scheduled/' + id, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setSnackbar({ open: true, message: 'Scheduled email cancelled successfully!', severity: 'success' });
+        fetchScheduledEmails();
+      } else {
+        const errorText = await response.text();
+        setSnackbar({ open: true, message: 'Failed to cancel scheduled email: ' + errorText, severity: 'error' });
+      }
+    } catch (error) {
+      setSnackbar({ open: true, message: 'Error cancelling scheduled email.', severity: 'error' });
+    }
+  };
   
   const contactGroups = useMemo(() => {
     const groups = contacts.reduce((acc, contact) => {
@@ -304,8 +343,9 @@ export default function SendEmail() {
   }, [contacts]);
 
   const filteredContacts = contacts.filter(contact =>
-    contact.full_name.toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
-    contact.email.toLowerCase().includes(contactSearchTerm.toLowerCase())
+    contact.email && contact.email.trim() !== '' && // Added condition
+    (contact.full_name.toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
+    contact.email.toLowerCase().includes(contactSearchTerm.toLowerCase()))
   );
 
   const handleContactToggle = (contact) => {
@@ -737,24 +777,25 @@ export default function SendEmail() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {/* Dummy data for scheduled emails */}
-                      <TableRow>
-                        <TableCell>1</TableCell>
-                        <TableCell>scheduled@example.com</TableCell>
-                        <TableCell>Scheduled Subject</TableCell>
-                        <TableCell><div dangerouslySetInnerHTML={{ __html: "Scheduled Message" }} /></TableCell>
-                        <TableCell>{new Date().toLocaleString()}</TableCell>
-                        <TableCell>
-                          <Button
-                            size="small"
-                            color="error"
-                            variant="outlined"
-                            onClick={() => cancelScheduledEmail(1)}
-                          >
-                            Cancel
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                      {scheduledEmails.map((email) => (
+                        <TableRow key={email.id}>
+                          <TableCell>{email.id}</TableCell>
+                          <TableCell>{email.recipients}</TableCell>
+                          <TableCell>{email.subject}</TableCell>
+                          <TableCell><div dangerouslySetInnerHTML={{ __html: email.message }} /></TableCell>
+                          <TableCell>{new Date(email.scheduled_at).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <Button
+                              size="small"
+                              color="error"
+                              variant="outlined"
+                              onClick={() => cancelScheduledEmail(email.id)}
+                            >
+                              Cancel
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -795,7 +836,7 @@ export default function SendEmail() {
               value={emails}
               onChange={(e) => setEmails(e.target.value)}
               fullWidth
-              helperText={`${selectedContacts.length} contact(s) selected`}
+              helperText={selectedContacts.length + ' contact(s) selected'}
             />
             <TextField
               label="Subject"
@@ -920,6 +961,7 @@ export default function SendEmail() {
                     setSnackbar({ open: true, message: 'Pick a date/time first', severity: 'error' });
                     return;
                   }
+                  handleSendEmail(true);
                   setScheduleOpen(false);
                 }}
               >

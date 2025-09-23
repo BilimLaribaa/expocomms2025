@@ -224,6 +224,7 @@ function MessageComposerStep({ message, setMessage, templates, setSelectedTempla
 
 function ContactSelectorStep({ contacts, selectedContacts, setSelectedContacts, openContactModal }) {
   const [selectedTab, setSelectedTab] = useState(0);
+  const [contactSearchTerm, setContactSearchTerm] = useState(''); // New state for search term
 
   const contactGroups = useMemo(() => {
     const groups = contacts.reduce((acc, contact) => {
@@ -239,6 +240,31 @@ function ContactSelectorStep({ contacts, selectedContacts, setSelectedContacts, 
       contactIds: groups[groupName],
     }));
   }, [contacts]);
+
+  // New filteredContacts logic
+ const filteredContacts = contacts.filter(contact => {
+  if (!contact.phone) return false;
+
+  // Clean the phone number: remove spaces and hyphens
+  const cleanedPhone = contact.phone.replace(/[-\s]/g, '');
+
+  // Exclude if empty after cleaning
+  if (cleanedPhone === '') return false;
+
+  // Exclude numbers starting with "02" or "2"
+  if (cleanedPhone.startsWith('02') || cleanedPhone.startsWith('2')) return false;
+
+  // Normalize the search term
+  const cleanedSearch = contactSearchTerm.replace(/[-\s]/g, '').toLowerCase();
+
+  // Match by name or cleaned phone
+  return (
+    contact.full_name.toLowerCase().includes(contactSearchTerm.toLowerCase()) ||
+    cleanedPhone.toLowerCase().includes(cleanedSearch)
+  );
+});
+
+
 
   const handleTabChange = (event, newValue) => {
     setSelectedTab(newValue);
@@ -280,7 +306,7 @@ function ContactSelectorStep({ contacts, selectedContacts, setSelectedContacts, 
 
   const handleSelectAll = () => {
     if (selectedTab === 0) {
-      setSelectedContacts(contacts.map(c => c.id));
+      setSelectedContacts(filteredContacts.map(c => c.id)); // Use filteredContacts here
     } else {
       const allContactIds = contactGroups.flatMap(g => g.contactIds);
       setSelectedContacts([...new Set([...selectedContacts, ...allContactIds])]);
@@ -309,13 +335,15 @@ function ContactSelectorStep({ contacts, selectedContacts, setSelectedContacts, 
             variant="outlined"
             size="small"
             placeholder="Search..."
+            value={contactSearchTerm} // Bind search term
+            onChange={(e) => setContactSearchTerm(e.target.value)} // Update search term
             InputProps={{ startAdornment: <SearchIcon position="start" sx={{ mr: 1 }} /> }}
             />
         </Box>
         <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
             {selectedTab === 0 && (
             <List dense>
-                {contacts.map((contact) => (
+                {filteredContacts.map((contact) => (
                 <ListItem
                     key={contact.id}
                     button
@@ -424,9 +452,9 @@ export default function SendWhatsapp() {
 
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/contacts`)
+    fetch(`${API_BASE_URL}/contacts?pageSize=10000`)
       .then(res => res.json())
-      .then(data => setContacts(data))
+      .then(data => setContacts(data.data))
       .catch(error => console.error('Error fetching contacts:', error));
 
     fetch(`${API_BASE_URL}/whatsapp-templates`)

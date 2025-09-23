@@ -4,6 +4,9 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const multer = require('multer');
+const cron = require('node-cron');
+const nodemailer = require('nodemailer');
+require('dotenv').config();
 
 const app = express();
 const port = 3001;
@@ -56,6 +59,21 @@ const db = new sqlite3.Database('./contacts.db', (err) => {
             console.error('Error creating email_logs table:', err.message);
           } else {
             console.log('email_logs table created or already exists.');
+            db.run(`CREATE TABLE IF NOT EXISTS scheduled_emails (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              recipients TEXT,
+              subject TEXT,
+              message TEXT,
+              attachments TEXT,
+              scheduled_at TEXT,
+              status TEXT DEFAULT 'pending'
+            )`, (err) => {
+              if (err) {
+                console.error('Error creating scheduled_emails table:', err.message);
+              } else {
+                console.log('scheduled_emails table created or already exists.');
+              }
+            });
           }
         });
       }
@@ -67,7 +85,8 @@ const db = new sqlite3.Database('./contacts.db', (err) => {
 const upload = multer({ dest: 'uploads/' });
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
 const contactController = require('./contactController')(db);
 const emailController = require('./emailController')(db);

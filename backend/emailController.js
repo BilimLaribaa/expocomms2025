@@ -17,13 +17,24 @@ module.exports = function(db) {
   });
 
   router.post('/send', (req, res) => {
-    const { to, subject, html } = req.body;
+    const { to, subject, html, scheduled_at } = req.body;
 
     if (!to) {
       return res.status(400).send('No recipients defined');
     }
 
     const userAttachments = req.files ? req.files.map(file => ({ filename: file.originalname, path: file.path })) : [];
+
+    if (scheduled_at) {
+      const attachments = JSON.stringify(userAttachments);
+      db.run(`INSERT INTO scheduled_emails (recipients, subject, message, attachments, scheduled_at) VALUES (?, ?, ?, ?, ?)`, [to, subject, html, attachments, scheduled_at], (err) => {
+        if (err) {
+          return res.status(500).send(err.message);
+        }
+        res.status(200).send('Email scheduled successfully');
+      });
+      return;
+    }
 
     const mailOptions = {
       from: `"Minds in Motion Foundation" <${process.env.EMAIL_USER}>`,
@@ -76,6 +87,29 @@ module.exports = function(db) {
         return res.status(404).send({ message: "Log not found" });
       }
       res.status(200).send({ message: "Log deleted successfully" });
+    });
+  });
+
+  router.get('/scheduled', (req, res) => {
+    db.all(`SELECT * FROM scheduled_emails ORDER BY scheduled_at DESC`, [], (err, rows) => {
+      if (err) {
+        res.status(500).send(err.message);
+        return;
+      }
+      res.json(rows);
+    });
+  });
+
+  router.delete('/scheduled/:id', (req, res) => {
+    const { id } = req.params;
+    db.run(`DELETE FROM scheduled_emails WHERE id = ?`, [id], function(err) {
+      if (err) {
+        return res.status(500).send(err.message);
+      }
+      if (this.changes === 0) {
+        return res.status(404).send({ message: "Scheduled email not found" });
+      }
+      res.status(200).send({ message: "Scheduled email deleted successfully" });
     });
   });
 

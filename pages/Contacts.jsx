@@ -126,12 +126,16 @@ export default function Contacts() {
   const [cities, setCities] = React.useState([]);
   const [contacts, setContacts] = React.useState([]); 
 
+  const [paginationModel, setPaginationModel] = React.useState({ page: 0, pageSize: 10 });
+  const [totalContacts, setTotalContacts] = React.useState(0);
+
   const fetchContacts = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/contacts`);
+      const response = await fetch(`${API_BASE_URL}/contacts?page=${paginationModel.page + 1}&pageSize=${paginationModel.pageSize}`);
       if (response.ok) {
         const data = await response.json();
-        setContacts(data);
+        setContacts(data.data || []);
+        setTotalContacts(data.total || 0);
       } else {
         console.error('Failed to fetch contacts:', response.statusText);
       }
@@ -147,8 +151,11 @@ export default function Contacts() {
         setCountries(data.data);
       })
       .catch(error => console.error('Error fetching countries:', error));
-    fetchContacts(); // Fetch contacts when component mounts
   }, []);
+
+  React.useEffect(() => {
+    fetchContacts(); // Fetch contacts when component mounts or pagination changes
+  }, [paginationModel]);
 
   const handleCountryChange = (e) => {
     const countryName = e.target.value;
@@ -361,8 +368,9 @@ export default function Contacts() {
           });
 
           if (response.ok) {
-            console.log('Contacts imported successfully:', importedContacts.length);
-            setSnackbarMessage(`${importedContacts.length} contacts imported successfully!`);
+            const result = await response.json();
+            console.log('Contacts imported successfully:', result.message);
+            setSnackbarMessage(result.message);
             setSnackbarOpen(true);
             fetchContacts(); // Refresh the contact list
           } else if (response.status === 409) {
@@ -371,8 +379,9 @@ export default function Contacts() {
             setNonDuplicateContacts(errorData.nonDuplicates);
             setDuplicatesModalOpen(true);
           } else {
-            console.error('Failed to import contacts:', response.statusText);
-            setSnackbarMessage("Failed to import contacts.");
+            const errorData = await response.json();
+            console.error('Failed to import contacts:', errorData.error);
+            setSnackbarMessage(`Failed to import contacts: ${errorData.error}`);
             setSnackbarOpen(true);
           }
         } catch (error) {
@@ -659,6 +668,11 @@ export default function Contacts() {
             disableRowSelectionOnClick
             slots={{ toolbar: GridToolbar }}
             disableExtendRowFullWidth={true}
+            pagination
+            paginationMode="server"
+            rowCount={totalContacts}
+            paginationModel={paginationModel}
+            onPaginationModelChange={setPaginationModel}
           initialState={{
     columns: {
       columnVisibilityModel: Object.fromEntries(
