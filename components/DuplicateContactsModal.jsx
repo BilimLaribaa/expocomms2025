@@ -16,13 +16,18 @@ import {
   Paper,
 } from '@mui/material';
 
-export default function DuplicateContactsModal({ open, onClose, duplicates, nonDuplicates, onSkip, onAdd }) {
+export default function DuplicateContactsModal({ open, onClose, duplicates, nonDuplicates, onSkip, onAdd, totalContacts, importedCount }) {
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>Duplicate Contacts Found</DialogTitle>
       <DialogContent>
+        {totalContacts > 0 && (
+          <Typography variant="body1" gutterBottom>
+            Successfully imported {importedCount} out of {totalContacts} contacts.
+          </Typography>
+        )}
         <Typography variant="body1" gutterBottom>
-          The following contacts already exist in your contact list. Do you want to add them anyway or skip them?
+          The following {duplicates.length} contacts already exist in your contact list. Do you want to add them anyway or skip them?
         </Typography>
         <TableContainer component={Paper} sx={{ mt: 2 }}>
           <Table>

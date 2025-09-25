@@ -147,6 +147,20 @@ module.exports = (db) => {
         }
     });
 
+    router.delete('/', (req, res) => {
+        try {
+            db.run("DELETE FROM contacts", function (err) {
+                if (err) {
+                    throw new Error(err.message);
+                }
+                res.status(204).send();
+            });
+        } catch (error) {
+            console.error(error);
+            return res.json({ "success": false, "error": error.message });
+        }
+    });
+
     router.post('/bulk-import', async (req, res) => {
         try {
             const contacts = req.body;
@@ -155,23 +169,40 @@ module.exports = (db) => {
                 throw new Error("Request body must be an array of contacts.");
             }
 
+            const existingContacts = await new Promise((resolve, reject) => {
+                db.all("SELECT email, phone, whatsapp FROM contacts", (err, rows) => {
+                    if (err) reject(err);
+                    resolve(rows);
+                });
+            });
+
+            const existingEmails = new Set(existingContacts.map(c => c.email).filter(Boolean));
+            const existingPhones = new Set(existingContacts.map(c => c.phone).filter(Boolean));
+            const existingWhatsapps = new Set(existingContacts.map(c => c.whatsapp).filter(Boolean));
+
             const duplicates = [];
             const nonDuplicates = [];
+            const totalContacts = contacts.length;
 
             for (const contact of contacts) {
                 const { email, phone, whatsapp } = contact;
-                const row = await new Promise((resolve, reject) => {
-                    db.get("SELECT * FROM contacts WHERE email = ? OR phone = ? OR whatsapp = ?", [email, phone, whatsapp], (err, row) => {
-                        if (err) reject(err);
-                        resolve(row);
-                    });
-                });
+                let isDuplicate = false;
+                const duplicateField = {};
 
-                if (row) {
-                    const duplicateField = {};
-                    if (row.email === email) duplicateField.email = email;
-                    if (row.phone === phone) duplicateField.phone = phone;
-                    if (row.whatsapp === whatsapp) duplicateField.whatsapp = whatsapp;
+                if (email && existingEmails.has(email)) {
+                    isDuplicate = true;
+                    duplicateField.email = email;
+                }
+                if (phone && existingPhones.has(phone)) {
+                    isDuplicate = true;
+                    duplicateField.phone = phone;
+                }
+                if (whatsapp && existingWhatsapps.has(whatsapp)) {
+                    isDuplicate = true;
+                    duplicateField.whatsapp = whatsapp;
+                }
+
+                if (isDuplicate) {
                     duplicates.push({ ...contact, duplicateField });
                 } else {
                     nonDuplicates.push(contact);
@@ -179,7 +210,6 @@ module.exports = (db) => {
             }
 
             if (nonDuplicates.length > 0) {
-                // Bulk insert non-duplicate contacts
                 const stmt = db.prepare(`INSERT INTO contacts (
                 name_title, full_name, phone, whatsapp, email, alternate_email, address, city, state, postal_code, country, contact_type, organization_name, job_title, department, website, linkedin, facebook, instagram, relationship, notes, is_favorite, is_active
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
@@ -197,9 +227,9 @@ module.exports = (db) => {
             }
 
             if (duplicates.length > 0) {
-                return res.status(409).json({ duplicates, nonDuplicates });
+                return res.status(409).json({ duplicates, nonDuplicates, totalContacts, importedCount: nonDuplicates.length });
             } else {
-                res.status(201).json({ message: `${nonDuplicates.length} contacts imported successfully.` });
+                res.status(201).json({ message: `${nonDuplicates.length} contacts imported successfully.`, totalContacts, importedCount: nonDuplicates.length });
             }
         } catch (error) {
             console.error(error);

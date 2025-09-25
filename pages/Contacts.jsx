@@ -23,6 +23,7 @@ import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import * as XLSX from 'xlsx'; 
 import API_BASE_URL from '../config.js';
 import DuplicateContactsModal from '../components/DuplicateContactsModal';
+import ImportProgressModal from '../components/ImportProgressModal';
 
 import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
@@ -95,6 +96,13 @@ export default function Contacts() {
   const [duplicatesModalOpen, setDuplicatesModalOpen] = React.useState(false);
   const [duplicateContacts, setDuplicateContacts] = React.useState([]);
   const [nonDuplicateContacts, setNonDuplicateContacts] = React.useState([]);
+
+  // Import Progress Modal
+  const [importProgressModalOpen, setImportProgressModalOpen] = React.useState(false);
+  const [importProgress, setImportProgress] = React.useState(0);
+  const [importTotalContacts, setImportTotalContacts] = React.useState(0);
+  const [importImportedCount, setImportImportedCount] = React.useState(0);
+  const [openDeleteAllConfirm, setOpenDeleteAllConfirm] = React.useState(false);
    
 
   const handleOpen = (contact = null) => {
@@ -320,9 +328,38 @@ export default function Contacts() {
     }
   };
 
+  const handleDeleteAllContacts = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/contacts`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        console.log('All contacts deleted successfully.');
+        setSnackbarMessage("All contacts successfully deleted!");
+        setSnackbarOpen(true);
+        fetchContacts();
+      } else {
+        console.error('Failed to delete all contacts:', response.statusText);
+        setSnackbarMessage("Failed to delete all contacts.");
+        setSnackbarOpen(true);
+      }
+    } catch (error) {
+      console.error('Error deleting all contacts:', error);
+      setSnackbarMessage("Error deleting all contacts.");
+      setSnackbarOpen(true);
+    }
+    setOpenDeleteAllConfirm(false);
+  };
+
   const onFileChange = async (event) => {
     const file = event.target.files[0];
     if (file) {
+      setImportProgressModalOpen(true);
+      setImportProgress(0);
+      setImportTotalContacts(0); // Reset total contacts
+      setImportImportedCount(0); // Reset imported count
+
       const reader = new FileReader();
       reader.onload = async (e) => {
         const data = new Uint8Array(e.target.result);
@@ -358,6 +395,8 @@ export default function Contacts() {
           is_active: row[22] === 1,
         }));
 
+        setImportTotalContacts(importedContacts.length); // Set total contacts from the file
+
         try {
           const response = await fetch(`${API_BASE_URL}/contacts/bulk-import`, {
             method: 'POST',
@@ -373,21 +412,31 @@ export default function Contacts() {
             setSnackbarMessage(result.message);
             setSnackbarOpen(true);
             fetchContacts(); // Refresh the contact list
+            setImportImportedCount(result.importedCount || importedContacts.length); // Update imported count
+            setImportProgress(100);
           } else if (response.status === 409) {
             const errorData = await response.json();
             setDuplicateContacts(errorData.duplicates);
             setNonDuplicateContacts(errorData.nonDuplicates);
             setDuplicatesModalOpen(true);
+            setImportImportedCount(errorData.importedCount || 0); // Update imported count
+            setImportProgress(100);
           } else {
             const errorData = await response.json();
             console.error('Failed to import contacts:', errorData.error);
             setSnackbarMessage(`Failed to import contacts: ${errorData.error}`);
             setSnackbarOpen(true);
+            setImportImportedCount(0); // No contacts imported on error
+            setImportProgress(100);
           }
         } catch (error) {
           console.error('Error importing contacts:', error);
           setSnackbarMessage("Error importing contacts.");
           setSnackbarOpen(true);
+          setImportImportedCount(0); // No contacts imported on error
+          setImportProgress(100);
+        } finally {
+          setImportProgressModalOpen(false);
         }
       };
       reader.readAsArrayBuffer(file);
@@ -560,6 +609,10 @@ export default function Contacts() {
 
           <Button variant="outlined" color="info" href="/excelformat/contacts_format.xlsx" download>
             Download Excel Format
+          </Button>
+
+          <Button variant="contained" color="error" onClick={() => setOpenDeleteAllConfirm(true)}>
+            Delete All
           </Button>
         </Box>
       </Box>
@@ -845,6 +898,37 @@ export default function Contacts() {
           onSkip={handleSkip}
           onAdd={handleAdd}
         />
+
+        <ImportProgressModal
+          open={importProgressModalOpen}
+          progress={importProgress}
+          totalContacts={importTotalContacts}
+          importedCount={importImportedCount}
+        />
+
+        <Dialog
+          open={openDeleteAllConfirm}
+          onClose={() => setOpenDeleteAllConfirm(false)}
+          aria-labelledby="alert-dialog-title"
+          aria-describedby="alert-dialog-description"
+        >
+          <DialogTitle id="alert-dialog-title">
+            {"Confirm Delete All Contacts"}
+          </DialogTitle>
+          <DialogContent>
+            <Typography id="alert-dialog-description">
+              Are you sure you want to delete all contacts? This action cannot be undone.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setOpenDeleteAllConfirm(false)} color="primary">
+              Cancel
+            </Button>
+            <Button onClick={handleDeleteAllContacts} color="error" autoFocus>
+              Delete All
+            </Button>
+          </DialogActions>
+        </Dialog>
     </Box>
   );
 }
